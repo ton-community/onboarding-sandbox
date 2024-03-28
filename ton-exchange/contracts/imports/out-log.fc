@@ -1,0 +1,11 @@
+builder store::ext_out_msg_info::ref(builder b)
+asm "b{11} x{0000000000000000000000000} |+ b{01} |+ STSLICECONST";
+
+() send_log(builder log) impure inline {
+  var ext_msg = begin_cell()
+  .store::ext_out_msg_info::ref()
+  .store_ref(begin_cell()
+  .store_builder(log)
+  .end_cell());
+  send_raw_message(ext_msg.end_cell(), 3); ;; pay transfer fee, ignore errors
+}

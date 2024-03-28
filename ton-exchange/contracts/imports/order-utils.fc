@@ -1,0 +1,34 @@
+#include "stdlib.fc";
+cell pack_order_data(int status, int base, int quote, int side, int quantity, int price, slice wallet_address, slice creator_address, int order_id, cell order_code) inline {
+   return  begin_cell()
+            .store_uint(status, 8)
+            .store_uint(base, 32)
+            .store_uint(quote, 32)
+            .store_uint(side, 8)
+            .store_uint(quantity, 64)
+            .store_uint(price, 32)
+            .store_slice(wallet_address)
+            .store_slice(creator_address)
+            .store_uint(order_id, 32)
+            .store_ref(order_code)
+           .end_cell();
+}
+
+cell calculate_order_state_init(int order_id, cell order_code) impure inline {
+  return begin_cell()
+          .store_uint(0, 2)
+          .store_dict(order_code)
+          .store_dict(pack_order_data(0, 0, 0, 0, 0, 0, "", "", order_id, order_code))
+          .store_uint(0, 1)
+         .end_cell();
+}
+
+const workchain = 0;
+
+slice calculate_order_address(cell state_init) impure inline {
+  return begin_cell().store_uint(4, 3)
+                     .store_int(workchain, 8)
+                     .store_uint(cell_hash(state_init), 256)
+                     .end_cell()
+                     .begin_parse();
+}
