@@ -40,7 +40,7 @@
        .store_uint(0x10, 6)
        .store_slice(new_order_address)
        .store_coins(msg_value / 4)
-       .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+       .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
        .store_ref(msg_body);
      send_raw_message(msg.end_cell(), 2);
 
@@ -68,7 +68,7 @@
        .store_uint(0x10, 6)
        .store_slice(sender_address) ;; deployer's jetton wallet address
        .store_coins(msg_value / 4)
-       .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+       .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
        .store_ref(order_wallet_msg_body.end_cell());
      send_raw_message(order_wallet_msg.end_cell(), 2);
 

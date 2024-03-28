@@ -64,7 +64,7 @@
         .store_coins(amount)
         .store_slice(to_address)
         .store_slice(excesses_address)      ;; response_address for excesses
-        .store_dict(new_dict())             ;; empty custom payload
+        .store_uint(0, 1)                   ;; empty custom payload (either dict)
         .store_coins(fwd_fee)               ;; forward_ton_amount TODO: need to calculate how many coins are neede to forwarded
         .store_uint(0, 8);                  ;; empty payload
     
@@ -72,7 +72,7 @@
         .store_uint(0x10, 6)
         .store_slice(from_address)          ;; who closes order jetton wallet address
         .store_coins(msg_value - 2 * fwd_fee)
-        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
         .store_ref(msg_body.end_cell());
 
     send_raw_message(msg.end_cell(), 2); 
