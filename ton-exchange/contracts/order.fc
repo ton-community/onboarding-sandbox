@@ -31,6 +31,7 @@
 () init_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
     throw_unless(814, slice_bits(in_msg_body) > 0);
 
+    int query_id = in_msg_body~load_uint(64);
     slice creator = in_msg_body~load_msg_addr();
 
     var (status, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code) = load_data();
@@ -109,36 +110,38 @@
     int user_quantity = calculate_quantity(user_side, jetton_amount, user_price);
     throw_unless(826, quantity == user_quantity);
 
+    ;; TODO: need to calculate excesses correctly
+    int value = msg_value / 2;
 
     if (side == side::SELLER) ;; buy order
     {
-        send_tokens(query_id, user_quantity, creator_address, sender_address, from_address, msg_value, fwd_fee);
-        send_tokens(query_id, quantity * price, from_address, wallet_address, from_address, msg_value, fwd_fee);
-        return();
+        send_tokens(query_id, user_quantity * user_price, creator_address, sender_address, from_address, value, fwd_fee);
+        send_tokens(query_id, quantity, from_address, wallet_address, from_address, msg_value - value, fwd_fee);
     }
-
-    ;; sell order
-    int value = msg_value / 2;
-    send_tokens(query_id, user_quantity * user_price, creator_address, sender_address, from_address, value, fwd_fee);
-    send_tokens(query_id, quantity, from_address, wallet_address, from_address, msg_value - value, fwd_fee);
-
+    else
+    {
+        ;; sell order
+        send_tokens(query_id, user_quantity, creator_address, sender_address, from_address, value, fwd_fee);
+        send_tokens(query_id, quantity * price, from_address, wallet_address, from_address, msg_value - value, fwd_fee);
+    }
+    
     ;; current excesses
-    var msg = begin_cell()
-        .store_uint(0x10, 6) ;;
-        .store_slice(from_address)
-        .store_coins(0)
-        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-        .store_int(0, 8); ;; simple transfer to wallet
-    send_raw_message(msg.end_cell(), 64);
+    ;; var msg_excesses = begin_cell()
+    ;;     .store_uint(0x10, 6)
+    ;;     .store_slice(from_address)
+    ;;     .store_coins(msg_value - 5 * fwd_fee)
+    ;;     .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    ;;     .store_int(0, 8); ;; simple transfer to wallet
+    ;; send_raw_message(msg_excesses.end_cell(), 64);
 
     ;; self destruct
-    var msg = begin_cell()
-        .store_uint(0x10, 6) ;;
-        .store_slice(creator_address)
-        .store_coins(0)
-        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-        .store_int(0, 8); ;; simple transfer to wallet
-    send_raw_message(msg.end_cell(), 128);
+    ;; var msg_destruct = begin_cell()
+    ;;     .store_uint(0x10, 6)
+    ;;     .store_slice(creator_address)
+    ;;     .store_coins(0)
+    ;;     .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    ;;     .store_int(0, 8); ;; simple transfer to wallet
+    ;; send_raw_message(msg_destruct.end_cell(), 128);
 
     save_data(status::CLOSED, base, quote, side, 0, price, order_id, deployer_address, creator_address, wallet_address, order_code);
 }
