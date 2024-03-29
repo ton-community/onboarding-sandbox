@@ -1,25 +1,31 @@
+#include "imports/constants.fc";
 #include "imports/stdlib.fc";
 #include "imports/order-utils.fc";
 #include "imports/opcodes.fc";
 
-(int, int, int, int, int, int, slice, slice, int, cell) load_data() inline {
+(int, int, int, int, int, int, int, slice, slice, slice, cell) load_data() inline {
   slice ds = get_data().begin_parse();
   return (
-        ds~load_uint(8),    ;; status (0 - not inited, 1 - inited, 2 - filled, 3 - closed)
+        ds~load_uint(2),    ;; status (0 - not inited, 1 - inited, 2 - filled, 3 - closed)
         ds~load_uint(32),   ;; base
         ds~load_uint(32),   ;; quote
-        ds~load_uint(8),    ;; side (0 - buy or 1 - sell)
+        ds~load_uint(1),    ;; side (0 - buy or 1 - sell)
         ds~load_uint(64),   ;; quantity
         ds~load_uint(32),   ;; price
-        ds~load_msg_addr(), ;; wallet_address
-        ds~load_msg_addr(), ;; creator_address
         ds~load_uint(32),   ;; order_id
+        ds~load_msg_addr(),  ;; deployer_address
+        slice_bits(ds) > 0 ? ds~load_msg_addr() : "", ;; creator_address
+        slice_bits(ds) > 0 ? ds~load_msg_addr() : "", ;; wallet_address
         ds~load_ref()       ;; order_code
   );
 }
 
-() save_data(int status, int base, int quote, int side, int quantity, int price, slice wallet_address, slice creator_address, int order_id, cell order_code) impure {
-    set_data(pack_order_data(status, base, quote, side, quantity, price, wallet_address, creator_address, order_id, order_code));
+() save_data(   int status, int base, int quote, int side,
+                int quantity, int price, int order_id,
+                slice deployer_address,
+                slice creator_address,
+                slice wallet_address, cell order_code) impure {
+    set_data(pack_order_data(status, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code));
 }
 
 () init_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
@@ -27,16 +33,17 @@
 
     slice creator = in_msg_body~load_msg_addr();
 
-    var (status, base, quote, side, quantity, price, wallet_address, creator_address, order_id, order_code) = load_data();
-    
-    throw_unless(815, equal_slices(creator_address, sender_address));
-    throw_unless(816, status == 0);
+    var (status, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code) = load_data();
 
-    save_data(1, base, quote, side, quantity, price, wallet_address, creator, order_id, order_code);
+    throw_unless(815, equal_slices(deployer_address, sender_address));
+    throw_unless(816, status == status::NOT_INITIALIZED);
+
+    save_data(status::INITIALIZED, base, quote, side, quantity, price, order_id, deployer_address, creator, wallet_address, order_code);
 }
 
+
 () fill_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
-    var (status, base, quote, side, quantity, price, wallet_address, creator_address, order_id, order_code) = load_data();
+    var (status, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code) = load_data();
 
     int query_id = in_msg_body~load_uint(64);
     int jetton_amount = in_msg_body~load_coins();
@@ -44,17 +51,18 @@
 
     slice either_forward_payload = in_msg_body;
 
-    throw_unless(818, slice_bits(either_forward_payload) == 32 + 32 + 8 + 32);
+    throw_unless(827, equal_slices(deployer_address, from_address));
+    throw_unless(818, slice_bits(either_forward_payload) == 32 + 32 + 1 + 32);
     base = either_forward_payload~load_uint(32);
     quote = either_forward_payload~load_uint(32);
-    side = either_forward_payload~load_uint(8);
+    side = either_forward_payload~load_uint(1);
     price = either_forward_payload~load_uint(32);
 
-    throw_unless(819, (side == 0) | (side == 1));
+    throw_unless(819, (side == side::SELLER) | (side == side::BUYER));
 
     wallet_address = sender_address;
-    quantity = jetton_amount / price;
-    save_data(2, base, quote, side, quantity, price, wallet_address, creator_address, order_id, order_code);
+    quantity = calculate_quantity(side, jetton_amount, price);
+    save_data(status::FILLED, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code);
 }
 
 () send_tokens(int query_id, int amount, slice to_address, slice from_address, slice excesses_address, int msg_value, int fwd_fee) impure inline {
@@ -64,10 +72,10 @@
         .store_coins(amount)
         .store_slice(to_address)
         .store_slice(excesses_address)      ;; response_address for excesses
-        .store_uint(0, 1)                   ;; empty custom payload (either dict)
+        .store_uint(0, 1)                   ;; empty custom payload
         .store_coins(fwd_fee)               ;; forward_ton_amount TODO: need to calculate how many coins are neede to forwarded
         .store_uint(0, 8);                  ;; empty payload
-    
+
     var msg = begin_cell()
         .store_uint(0x10, 6)
         .store_slice(from_address)          ;; who closes order jetton wallet address
@@ -75,31 +83,34 @@
         .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
         .store_ref(msg_body.end_cell());
 
-    send_raw_message(msg.end_cell(), 2); 
+    send_raw_message(msg.end_cell(), 2);
 }
 
 () close_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
-    var (status, base, quote, side, quantity, price, wallet_address, creator_address, order_id, order_code) = load_data();
+    var (status, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code) = load_data();
 
     int query_id = in_msg_body~load_uint(64);
-    int user_quantity = in_msg_body~load_coins();
+    int jetton_amount = in_msg_body~load_coins();
     slice from_address = in_msg_body~load_msg_addr();
 
     slice either_forward_payload = in_msg_body;
-    throw_unless(821, slice_bits(either_forward_payload) == 32 + 32 + 8 + 32);
+    throw_unless(821, slice_bits(either_forward_payload) == 32 + 32 + 1 + 32);
 
     int user_base = either_forward_payload~load_uint(32);
     int user_quote = either_forward_payload~load_uint(32);
-    int user_side = either_forward_payload~load_uint(8);
+    int user_side = either_forward_payload~load_uint(1);
     int user_price = either_forward_payload~load_uint(32);
 
     throw_unless(822, base == user_base);
     throw_unless(823, quote == user_quote);
-    throw_unless(824, side == 0 ? user_side == 1 : user_side == 0);
+    throw_unless(824, side == side::SELLER ? user_side == side::BUYER : user_side == side::SELLER);
     throw_unless(825, price == user_price);
+
+    int user_quantity = calculate_quantity(user_side, jetton_amount, user_price);
     throw_unless(826, quantity == user_quantity);
 
-    if (side == 0) ;; buy order
+
+    if (side == side::SELLER) ;; buy order
     {
         send_tokens(query_id, user_quantity, creator_address, sender_address, from_address, msg_value, fwd_fee);
         send_tokens(query_id, quantity * price, from_address, wallet_address, from_address, msg_value, fwd_fee);
@@ -111,17 +122,25 @@
     send_tokens(query_id, user_quantity * user_price, creator_address, sender_address, from_address, value, fwd_fee);
     send_tokens(query_id, quantity, from_address, wallet_address, from_address, msg_value - value, fwd_fee);
 
-    ;; self destruct
+    ;; current excesses
     var msg = begin_cell()
-    .store_uint(0x10, 6) ;; we should not bounce here cause receiver can have uninitialized contract
-    .store_slice(creator_address)
-    .store_coins(0)
-    .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-    .store_int(0, 8); ;; simple transfer to wallet
+        .store_uint(0x10, 6) ;;
+        .store_slice(from_address)
+        .store_coins(0)
+        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_int(0, 8); ;; simple transfer to wallet
     send_raw_message(msg.end_cell(), 64);
 
+    ;; self destruct
+    var msg = begin_cell()
+        .store_uint(0x10, 6) ;;
+        .store_slice(creator_address)
+        .store_coins(0)
+        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_int(0, 8); ;; simple transfer to wallet
+    send_raw_message(msg.end_cell(), 128);
 
-    save_data(3, base, quote, side, 0, price, wallet_address, creator_address, order_id, order_code);
+    save_data(status::CLOSED, base, quote, side, 0, price, order_id, deployer_address, creator_address, wallet_address, order_code);
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
@@ -132,7 +151,7 @@
     slice cs = in_msg_full.begin_parse();
     int flags = cs~load_uint(4);
     if (flags & 1) {
-        return ();
+        return (); ;; ignore bounced
     }
 
     slice sender_address = cs~load_msg_addr();
@@ -152,14 +171,14 @@
     if (op == op::transfer_notification()) {
 
         slice ds = get_data().begin_parse();
-        int status = ds~load_uint(8);
+        int status = ds~load_uint(2);
 
-        if (status == 1) {
+        if (status == status::INITIALIZED) {
             fill_order(in_msg_body, sender_address, msg_value, fwd_fee);
             return ();
         }
 
-        if (status == 2) {
+        if (status == status::FILLED) {
             close_order(in_msg_body, sender_address, msg_value, fwd_fee);
             return ();
         }
@@ -170,8 +189,8 @@
     throw(0xffff);
 }
 
-(int, int, int, int, int, int, slice, slice, int, cell) get_order_data() method_id {
-    var (status, base, quote, side, quantity, price, wallet_address, creator_address, order_id, order_code) = load_data();
-    return (status, base, quote, side, quantity, price, wallet_address, creator_address, order_id, order_code);
+(int, int, int, int, int, int, int, slice, slice, slice, cell) get_order_data() method_id {
+    var (status, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code) = load_data();
+    return (status, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code);
 }
 

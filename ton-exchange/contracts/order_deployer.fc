@@ -1,3 +1,4 @@
+#include "imports/constants.fc";
 #include "imports/stdlib.fc";
 #include "imports/order-utils.fc";
 #include "imports/opcodes.fc";
@@ -27,50 +28,55 @@
     slice from_address = in_msg_body~load_msg_addr(); ;; jetton's owner address - order creator
 
     (slice owner_address, int order_id, cell order_code) = load_data();
-    cell state_init = calculate_order_state_init(order_id, order_code);
+    cell state_init = calculate_order_state_init(my_address(), order_id, order_code);
     slice new_order_address = calculate_order_address(state_init);
 
-    ;; create new order contract
-     var msg_body = begin_cell()
+    ;; deploy new order contract
+    var msg_body = begin_cell()
          .store_uint(op::init_order(), 32)
          .store_uint(query_id, 64)
          .store_slice(from_address)
-     .end_cell();
-     var msg = begin_cell()
-       .store_uint(0x10, 6)
+    .end_cell();
+    var msg = begin_cell()
+       .store_uint(0x18, 6)
        .store_slice(new_order_address)
-       .store_coins(msg_value / 4)
-       .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+       .store_coins(msg_value / 3)
+       .store_uint(0, 1 + 4 + 4 + 64 + 32)
+       .store_uint(1, 1)
+       .store_uint(1, 1)
+       .store_ref(state_init)
+       .store_uint(1, 1)
        .store_ref(msg_body);
-     send_raw_message(msg.end_cell(), 2);
+    send_raw_message(msg.end_cell(), 2);
 
     ;; send jetton to orders wallet
     slice either_forward_payload = in_msg_body;
-    throw_unless(714, slice_bits(either_forward_payload) == 32 + 32 + 8 + 32); ;; base, quote, side, price
+    throw_unless(714, slice_bits(either_forward_payload) == 32 + 32 + 1 + 32); ;; base, quote, side, price
 
     ;; check jetton amount divided by price
     slice payload = either_forward_payload;
-    payload~skip_bits(32 + 32 + 8);
+    payload~skip_bits(32 + 32);
+    int side = payload~load_uint(1);
     int price = payload~load_uint(32);
-    throw_unless(715, jetton_amount ^% price == 0);
+    throw_unless(715, side == side::SELLER & (jetton_amount ^% price == 0));
 
-     var order_wallet_msg_body = begin_cell()
-         .store_uint(op::transfer(), 32)
-         .store_uint(query_id, 64)
-         .store_coins(jetton_amount)
-         .store_slice(new_order_address)
-         .store_slice(from_address)          ;; response_address for excesses
-         .store_dict(new_dict())             ;; empty custom payload
-         .store_coins(fwd_fee)
-         .store_slice(either_forward_payload);
+    var order_wallet_msg_body = begin_cell()
+        .store_uint(op::transfer(), 32)
+        .store_uint(query_id, 64)
+        .store_coins(jetton_amount)
+        .store_slice(new_order_address)
+        .store_slice(from_address)     ;; response_address for excesses
+        .store_uint(0, 1)              ;; empty custom payload (either dict)
+        .store_coins(msg_value / 4)
+        .store_slice(either_forward_payload);
 
-     var order_wallet_msg = begin_cell()
-       .store_uint(0x10, 6)
-       .store_slice(sender_address) ;; deployer's jetton wallet address
-       .store_coins(msg_value / 4)
-       .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-       .store_ref(order_wallet_msg_body.end_cell());
-     send_raw_message(order_wallet_msg.end_cell(), 2);
+    var order_wallet_msg = begin_cell()
+        .store_uint(0x10, 6)
+        .store_slice(sender_address) ;; deployer's jetton wallet address
+        .store_coins(msg_value / 3)
+        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_ref(order_wallet_msg_body.end_cell());
+    send_raw_message(order_wallet_msg.end_cell(), 2);
 
     ;; notify about new order
     builder log = begin_cell()
@@ -117,6 +123,6 @@
 
 slice get_order_address(int order_id) method_id {
     (_, _, cell order_code) = load_data();
-    cell state_init = calculate_order_state_init(order_id, order_code);
+    cell state_init = calculate_order_state_init(my_address(), order_id, order_code);
     return calculate_order_address(state_init);
 }

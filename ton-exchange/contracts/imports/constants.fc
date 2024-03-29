@@ -1,0 +1,7 @@
+const side::SELLER = 0;
+const side::BUYER = 1;
+
+const status::NOT_INITIALIZED = 0;
+const status::INITIALIZED = 1;
+const status::FILLED = 2;
+const status::CLOSED = 3;
