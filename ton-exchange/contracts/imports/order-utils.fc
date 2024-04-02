@@ -1,42 +1,51 @@
 #include "constants.fc";
 #include "stdlib.fc";
+#include "jetton-utils.fc";
 
-cell pack_order_data( int status, int base, int quote, int side, int quantity, int price, int order_id,
-                      slice deployer_address, slice creator_address, slice wallet_address, cell order_code) inline {
-   return  begin_cell()
-            .store_uint(status, 2)
-            .store_uint(base, 32)
-            .store_uint(quote, 32)
-            .store_uint(side, 1)
-            .store_uint(quantity, 64)
-            .store_uint(price, 32)
-            .store_uint(order_id, 32)
-            .store_slice(deployer_address)
-            .store_slice(creator_address)
-            .store_slice(wallet_address)
-            .store_ref(order_code)
-           .end_cell();
+cell pack_order_data(int status, slice base_jetton_address, slice quote_jetton_address, int side, int quantity, int price, int order_id, slice deployer_address, slice creator_address, slice wallet_address, cell order_code, cell jetton_wallet_code) inline {
+    cell base_quote_cell = begin_cell()
+        .store_slice(base_jetton_address)
+        .store_slice(quote_jetton_address)
+        .end_cell();
+
+    return begin_cell()
+        .store_uint(status, 2)
+        .store_ref(base_quote_cell)
+        .store_uint(side, 1)
+        .store_uint(quantity, 64)
+        .store_uint(price, 32)
+        .store_uint(order_id, 32)
+        .store_slice(deployer_address)
+        .store_slice(creator_address)
+        .store_slice(wallet_address)
+        .store_ref(order_code)
+        .store_ref(jetton_wallet_code)
+        .end_cell();
 }
 
-cell calculate_order_state_init(slice deployer_address, int order_id, cell order_code) impure inline {
-  return begin_cell()
-          .store_uint(0, 2)
-          .store_dict(order_code)
-          .store_dict(pack_order_data(0, 0, 0, 0, 0, 0, order_id, deployer_address, "", "", order_code))
-          .store_uint(0, 1)
-         .end_cell();
+cell calculate_order_state_init(slice deployer_address, int order_id, cell order_code, cell jetton_wallet_code) impure inline {
+    return begin_cell()
+        .store_uint(0, 2)
+        .store_dict(order_code)
+        .store_dict(pack_order_data(0, "", "", 0, 0, 0, order_id, deployer_address, "", "", order_code, jetton_wallet_code))
+        .store_uint(0, 1)
+        .end_cell();
 }
-
-const workchain = 0;
 
 slice calculate_order_address(cell state_init) impure inline {
-  return begin_cell().store_uint(4, 3)
-                     .store_int(workchain, 8)
-                     .store_uint(cell_hash(state_init), 256)
-                     .end_cell()
-                     .begin_parse();
+    return begin_cell().store_uint(4, 3)
+        .store_int(workchain(), 8)
+        .store_uint(cell_hash(state_init), 256)
+        .end_cell()
+        .begin_parse();
 }
 
-int calculate_quantity(int side, int jetton_amount, int price) impure inline  {
-  return side == side::SELLER ? jetton_amount : jetton_amount / price;
+int calculate_quantity(int side, int jetton_amount, int price) impure inline {
+    return side == side::SELLER ? jetton_amount : jetton_amount / price;
+}
+
+() throw_if_jetton_wallet_fraud_detected(slice provided_address, slice owner_address, slice jetton_wallet_master_address,cell jetton_wallet_code) impure inline {
+    cell jetton_wallet_state_init = calculate_jetton_wallet_state_init(owner_address, jetton_wallet_master_address, jetton_wallet_code);
+    slice calculated_jetton_wallet_address = calculate_jetton_wallet_address(jetton_wallet_state_init);
+    throw_unless(899, equal_slices(provided_address, calculated_jetton_wallet_address));
 }

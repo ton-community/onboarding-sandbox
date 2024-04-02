@@ -7,6 +7,7 @@ export async function run(provider: NetworkProvider) {
     admin: Address.parse('0QA__NJI1SLHyIaG7lQ6OFpAe9kp85fwPr66YwZwFc0p5wIu'),
     orderId: 0,
     orderCode: await compile('Order'),
+    jettonWalletCode: await compile('JettonWallet'),
   }, await compile('OrderDeployer')));
 
   //const res = await orderDeployer.getOrderAddress(0);
