@@ -1,0 +1,29 @@
+#include "imports/stdlib.fc";
+
+(int, slice) load_data() inline {
+    slice ds = get_data().begin_parse();
+
+    int end_time_t = ds~load_uint(64); ;; timestamp end of contract
+    slice creator_address = ds~load_msg_addr(); ;; timestamp end of contract
+
+    return (end_time_t, creator_address);
+}
+
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+}
+
+() run_ticktock() impure {
+    (int end_time_t, slice creator_address) = load_data();
+
+    if (end_time_t > now()) {
+        ;; self destruct
+        var msg_destruct = begin_cell()
+            .store_uint(0x10, 6)
+            .store_slice(creator_address)
+            .store_coins(0)
+            .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+            .store_int(0, 8); ;; simple transfer to wallet
+        send_raw_message(msg_destruct.end_cell(), 128);
+    }
+}
