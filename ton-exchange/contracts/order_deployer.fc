@@ -1,6 +1,7 @@
 #include "imports/constants.fc";
 #include "imports/stdlib.fc";
 #include "imports/order-utils.fc";
+#include "imports/order-asserts.fc";
 #include "imports/opcodes.fc";
 #include "imports/out-log.fc";
 
@@ -53,18 +54,19 @@
 
     ;; send jetton to orders wallet
     slice either_forward_payload = in_msg_body;
-    throw_unless(714, slice_bits(either_forward_payload) == 256 + 256 + 1 + 32); ;; base, quote, side, price
+    throw_if_payload_invalid(714, either_forward_payload);
 
     ;; check jetton amount divided by price
     slice payload = either_forward_payload;
-    slice base_jetton_address = payload~load_msg_addr();
-    slice quote_jetton_address = payload~load_msg_addr();
+    slice base_jetton_slice = payload~load_ref().begin_parse();
+    slice base_jetton_address = base_jetton_slice~load_msg_addr();
+    slice quote_jetton_address = base_jetton_slice~load_msg_addr();
     int side = payload~load_uint(1);
     int price = payload~load_uint(32);
 
     ;; instead of order create jetton wallet address we use order deployer
     ;; jetton wallet address because it will be the same currency
-    throw_if_jetton_wallet_fraud_detected(sender_address,my_address(), side == side::SELLER ? base_jetton_address : quote_jetton_address, jetton_wallet_code);
+    throw_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? base_jetton_address : quote_jetton_address, jetton_wallet_code);
     throw_unless(715, side == side::SELLER & (jetton_amount ^% price == 0));
 
     var order_wallet_msg_body = begin_cell()

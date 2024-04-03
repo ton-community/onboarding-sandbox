@@ -3,13 +3,14 @@
 #include "imports/order-utils.fc";
 #include "imports/opcodes.fc";
 #include "imports/jetton-utils.fc";
+#include "imports/order-asserts.fc";
 
 (int, slice, slice, int, int, int, int, slice, slice, slice, cell, cell) load_data() inline {
     slice ds = get_data().begin_parse();
     int status = ds~load_uint(2);
     slice base_quote_slice = ds~load_ref().begin_parse();
-    slice base_wallet_address = base_quote_slice~load_msg_addr(); ;; base_jetton_address
-    slice quote_wallet_address = base_quote_slice~load_msg_addr(); ;; quote_jetton_address
+    slice base_wallet_address = slice_bits(base_quote_slice) > 0 ? base_quote_slice~load_msg_addr() : ""; ;; base_jetton_address
+    slice quote_wallet_address = slice_bits(base_quote_slice) > 0 ? base_quote_slice~load_msg_addr() : ""; ;; quote_jetton_address
 
     return (
         status, ;; status (0 - not inited, 1 - inited, 2 - filled, 3 - closed)
@@ -57,10 +58,11 @@
     slice either_forward_payload = in_msg_body;
 
     throw_unless(827, equal_slices(deployer_address, from_address));
-    throw_unless(818, slice_bits(either_forward_payload) == 256 + 256 + 1 + 32);
+    throw_if_payload_invalid(818, either_forward_payload);
 
-    base_jetton_address = either_forward_payload~load_msg_addr();
-    quote_jetton_address = either_forward_payload~load_msg_addr();
+    slice base_jetton_slice = either_forward_payload~load_ref().begin_parse();
+    base_jetton_address = base_jetton_slice~load_msg_addr();
+    quote_jetton_address = base_jetton_slice~load_msg_addr();
     side = either_forward_payload~load_uint(1);
     price = either_forward_payload~load_uint(32);
 
@@ -100,17 +102,18 @@
     slice from_address = in_msg_body~load_msg_addr();
 
     slice either_forward_payload = in_msg_body;
-    throw_unless(821, slice_bits(either_forward_payload) == 256 + 256 + 1 + 32);
+    throw_if_payload_invalid(821, either_forward_payload);
 
-    slice user_base_wallet_address = either_forward_payload~load_msg_addr();
-    slice user_quote_wallet_address = either_forward_payload~load_msg_addr();
+    slice base_jetton_slice = either_forward_payload~load_ref().begin_parse();
+    slice user_base_wallet_address = base_jetton_slice~load_msg_addr();
+    slice user_quote_wallet_address = base_jetton_slice~load_msg_addr();
     int user_side = either_forward_payload~load_uint(1);
     int user_price = either_forward_payload~load_uint(32);
 
     throw_unless(822, equal_slice_bits(base_wallet_address, user_base_wallet_address));
     throw_unless(823, equal_slice_bits(quote_wallet_address, user_quote_wallet_address));
 
-    throw_if_jetton_wallet_fraud_detected(sender_address, from_address,side == side::SELLER ? quote_wallet_address : base_wallet_address, jetton_wallet_code);
+    throw_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? quote_wallet_address : base_wallet_address, jetton_wallet_code);
 
     throw_unless(824, side == side::SELLER ? user_side == side::BUYER : user_side == side::SELLER);
     throw_unless(825, price == user_price);
@@ -201,8 +204,21 @@
     throw(0xffff);
 }
 
+
 (int, slice, slice, int, int, int, int, slice, slice, slice, cell, cell) get_order_data() method_id {
+    return load_data();
+}
+
+(int, int, int) get_bits_sizes() method_id {
     var (status, base_wallet_address, quote_wallet_address, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code) = load_data();
-    return (status, base_wallet_address, quote_wallet_address, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code);
+
+    slice c = begin_cell().store_ref(begin_cell().store_slice(deployer_address).store_slice(deployer_address).end_cell()).store_uint(0, 1).store_uint(1, 32).end_cell().begin_parse();
+    return c.slice_compute_data_size(2);
+}
+
+int get_bits_sizes_address() method_id {
+    var (status, base_wallet_address, quote_wallet_address, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code) = load_data();
+
+    return deployer_address.slice_bits();
 }
 

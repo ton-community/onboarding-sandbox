@@ -44,8 +44,4 @@ int calculate_quantity(int side, int jetton_amount, int price) impure inline {
     return side == side::SELLER ? jetton_amount : jetton_amount / price;
 }
 
-() throw_if_jetton_wallet_fraud_detected(slice provided_address, slice owner_address, slice jetton_wallet_master_address,cell jetton_wallet_code) impure inline {
-    cell jetton_wallet_state_init = calculate_jetton_wallet_state_init(owner_address, jetton_wallet_master_address, jetton_wallet_code);
-    slice calculated_jetton_wallet_address = calculate_jetton_wallet_address(jetton_wallet_state_init);
-    throw_unless(899, equal_slices(provided_address, calculated_jetton_wallet_address));
-}
+
