@@ -2,14 +2,14 @@
 #include "stdlib.fc";
 #include "jetton-utils.fc";
 
-cell pack_order_data(int status, slice base_jetton_address, slice quote_jetton_address, int side, int quantity, int price, int order_id, slice deployer_address, slice creator_address, slice wallet_address, cell order_code, cell jetton_wallet_code) inline {
+cell pack_order_data(int status, slice base_jetton_address, slice quote_jetton_address, int side, int quantity, int price, int order_id, slice deployer_address, slice creator_address, slice wallet_address, cell order_code, cell jetton_wallet_code, int expiration_time_t) inline {
     cell base_quote_cell = begin_cell()
         .store_slice(base_jetton_address)
         .store_slice(quote_jetton_address)
         .end_cell();
 
     return begin_cell()
-        .store_uint(status, 2)
+        .store_uint(status, 3)
         .store_ref(base_quote_cell)
         .store_uint(side, 1)
         .store_uint(quantity, 64)
@@ -20,6 +20,7 @@ cell pack_order_data(int status, slice base_jetton_address, slice quote_jetton_a
         .store_slice(wallet_address)
         .store_ref(order_code)
         .store_ref(jetton_wallet_code)
+        .store_uint(expiration_time_t, 64)
         .end_cell();
 }
 
@@ -27,7 +28,7 @@ cell calculate_order_state_init(slice deployer_address, int order_id, cell order
     return begin_cell()
         .store_uint(0, 2)
         .store_dict(order_code)
-        .store_dict(pack_order_data(0, "", "", 0, 0, 0, order_id, deployer_address, "", "", order_code, jetton_wallet_code))
+        .store_dict(pack_order_data(0, "", "", 0, 0, 0, order_id, deployer_address, "", "", order_code, jetton_wallet_code, 0))
         .store_uint(0, 1)
         .end_cell();
 }

@@ -54,7 +54,7 @@
 
     ;; send jetton to orders wallet
     slice either_forward_payload = in_msg_body;
-    throw_if_payload_invalid(714, either_forward_payload);
+    throw_if_fill_order_payload_invalid(714, either_forward_payload);
 
     ;; check jetton amount divided by price
     slice payload = either_forward_payload;
