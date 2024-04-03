@@ -2,30 +2,34 @@
 #include "imports/stdlib.fc";
 #include "imports/order-utils.fc";
 #include "imports/opcodes.fc";
+#include "imports/jetton-utils.fc";
+#include "imports/order-asserts.fc";
 
-(int, int, int, int, int, int, int, slice, slice, slice, cell) load_data() inline {
-  slice ds = get_data().begin_parse();
-  return (
-        ds~load_uint(2),    ;; status (0 - not inited, 1 - inited, 2 - filled, 3 - closed)
-        ds~load_uint(32),   ;; base
-        ds~load_uint(32),   ;; quote
-        ds~load_uint(1),    ;; side (0 - buy or 1 - sell)
-        ds~load_uint(64),   ;; quantity
-        ds~load_uint(32),   ;; price
-        ds~load_uint(32),   ;; order_id
-        ds~load_msg_addr(),  ;; deployer_address
+(int, slice, slice, int, int, int, int, slice, slice, slice, cell, cell) load_data() inline {
+    slice ds = get_data().begin_parse();
+    int status = ds~load_uint(2);
+    slice base_quote_slice = ds~load_ref().begin_parse();
+    slice base_wallet_address = slice_bits(base_quote_slice) > 0 ? base_quote_slice~load_msg_addr() : ""; ;; base_jetton_address
+    slice quote_wallet_address = slice_bits(base_quote_slice) > 0 ? base_quote_slice~load_msg_addr() : ""; ;; quote_jetton_address
+
+    return (
+        status, ;; status (0 - not inited, 1 - inited, 2 - filled, 3 - closed)
+        base_wallet_address,
+        quote_wallet_address,
+        ds~load_uint(1), ;; side (0 - buy or 1 - sell)
+        ds~load_uint(64), ;; quantity
+        ds~load_uint(32), ;; price
+        ds~load_uint(32), ;; order_id
+        ds~load_msg_addr(), ;; deployer_address
         slice_bits(ds) > 0 ? ds~load_msg_addr() : "", ;; creator_address
         slice_bits(ds) > 0 ? ds~load_msg_addr() : "", ;; wallet_address
-        ds~load_ref()       ;; order_code
-  );
+        ds~load_ref(), ;; order_code
+        ds~load_ref()       ;; jetton_wallet_code
+    );
 }
 
-() save_data(   int status, int base, int quote, int side,
-                int quantity, int price, int order_id,
-                slice deployer_address,
-                slice creator_address,
-                slice wallet_address, cell order_code) impure {
-    set_data(pack_order_data(status, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code));
+() save_data(int status, slice base_jetton_address, slice quote_jetton_address, int side, int quantity, int price, int order_id, slice deployer_address, slice creator_address, slice wallet_address, cell order_code, cell jetton_wallet_code) impure {
+    set_data(pack_order_data(status, base_jetton_address, quote_jetton_address, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code));
 }
 
 () init_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
@@ -34,17 +38,18 @@
     int query_id = in_msg_body~load_uint(64);
     slice creator = in_msg_body~load_msg_addr();
 
-    var (status, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code) = load_data();
+    var (status, base_jetton_address, quote_jetton_address, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code) = load_data();
 
     throw_unless(815, equal_slices(deployer_address, sender_address));
     throw_unless(816, status == status::NOT_INITIALIZED);
 
-    save_data(status::INITIALIZED, base, quote, side, quantity, price, order_id, deployer_address, creator, wallet_address, order_code);
+    save_data(status::INITIALIZED, base_jetton_address, quote_jetton_address, side, quantity, price, order_id, deployer_address, creator, wallet_address, order_code, jetton_wallet_code);
 }
 
 
+
 () fill_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
-    var (status, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code) = load_data();
+    var (status, base_jetton_address, quote_jetton_address, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code) = load_data();
 
     int query_id = in_msg_body~load_uint(64);
     int jetton_amount = in_msg_body~load_coins();
@@ -53,9 +58,11 @@
     slice either_forward_payload = in_msg_body;
 
     throw_unless(827, equal_slices(deployer_address, from_address));
-    throw_unless(818, slice_bits(either_forward_payload) == 32 + 32 + 1 + 32);
-    base = either_forward_payload~load_uint(32);
-    quote = either_forward_payload~load_uint(32);
+    throw_if_payload_invalid(818, either_forward_payload);
+
+    slice base_jetton_slice = either_forward_payload~load_ref().begin_parse();
+    base_jetton_address = base_jetton_slice~load_msg_addr();
+    quote_jetton_address = base_jetton_slice~load_msg_addr();
     side = either_forward_payload~load_uint(1);
     price = either_forward_payload~load_uint(32);
 
@@ -63,7 +70,7 @@
 
     wallet_address = sender_address;
     quantity = calculate_quantity(side, jetton_amount, price);
-    save_data(status::FILLED, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code);
+    save_data(status::FILLED, base_jetton_address, quote_jetton_address, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code);
 }
 
 () send_tokens(int query_id, int amount, slice to_address, slice from_address, slice excesses_address, int msg_value, int fwd_fee) impure inline {
@@ -88,22 +95,26 @@
 }
 
 () close_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
-    var (status, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code) = load_data();
+    var (status, base_wallet_address, quote_wallet_address, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code) = load_data();
 
     int query_id = in_msg_body~load_uint(64);
     int jetton_amount = in_msg_body~load_coins();
     slice from_address = in_msg_body~load_msg_addr();
 
     slice either_forward_payload = in_msg_body;
-    throw_unless(821, slice_bits(either_forward_payload) == 32 + 32 + 1 + 32);
+    throw_if_payload_invalid(821, either_forward_payload);
 
-    int user_base = either_forward_payload~load_uint(32);
-    int user_quote = either_forward_payload~load_uint(32);
+    slice base_jetton_slice = either_forward_payload~load_ref().begin_parse();
+    slice user_base_wallet_address = base_jetton_slice~load_msg_addr();
+    slice user_quote_wallet_address = base_jetton_slice~load_msg_addr();
     int user_side = either_forward_payload~load_uint(1);
     int user_price = either_forward_payload~load_uint(32);
 
-    throw_unless(822, base == user_base);
-    throw_unless(823, quote == user_quote);
+    throw_unless(822, equal_slice_bits(base_wallet_address, user_base_wallet_address));
+    throw_unless(823, equal_slice_bits(quote_wallet_address, user_quote_wallet_address));
+
+    throw_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? quote_wallet_address : base_wallet_address, jetton_wallet_code);
+
     throw_unless(824, side == side::SELLER ? user_side == side::BUYER : user_side == side::SELLER);
     throw_unless(825, price == user_price);
 
@@ -124,7 +135,7 @@
         send_tokens(query_id, user_quantity, creator_address, sender_address, from_address, value, fwd_fee);
         send_tokens(query_id, quantity * price, from_address, wallet_address, from_address, msg_value - value, fwd_fee);
     }
-    
+
     ;; current excesses
     ;; var msg_excesses = begin_cell()
     ;;     .store_uint(0x10, 6)
@@ -143,11 +154,12 @@
     ;;     .store_int(0, 8); ;; simple transfer to wallet
     ;; send_raw_message(msg_destruct.end_cell(), 128);
 
-    save_data(status::CLOSED, base, quote, side, 0, price, order_id, deployer_address, creator_address, wallet_address, order_code);
+    save_data(status::CLOSED, base_wallet_address, quote_wallet_address, side, 0, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code);
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
-    if (in_msg_body.slice_empty?()) { ;; ignore empty messages
+    if (in_msg_body.slice_empty?()) {
+        ;; ignore empty messages
         return ();
     }
 
@@ -192,8 +204,21 @@
     throw(0xffff);
 }
 
-(int, int, int, int, int, int, int, slice, slice, slice, cell) get_order_data() method_id {
-    var (status, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code) = load_data();
-    return (status, base, quote, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code);
+
+(int, slice, slice, int, int, int, int, slice, slice, slice, cell, cell) get_order_data() method_id {
+    return load_data();
+}
+
+(int, int, int) get_bits_sizes() method_id {
+    var (status, base_wallet_address, quote_wallet_address, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code) = load_data();
+
+    slice c = begin_cell().store_ref(begin_cell().store_slice(deployer_address).store_slice(deployer_address).end_cell()).store_uint(0, 1).store_uint(1, 32).end_cell().begin_parse();
+    return c.slice_compute_data_size(2);
+}
+
+int get_bits_sizes_address() method_id {
+    var (status, base_wallet_address, quote_wallet_address, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code) = load_data();
+
+    return deployer_address.slice_bits();
 }
 

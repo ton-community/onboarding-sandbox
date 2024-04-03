@@ -4,15 +4,20 @@ export type OrderDeployerConfig = {
   admin: Address;
   orderId: number;
   orderCode: Cell;
+  jettonWalletCode: Cell;
 };
 
-export type GetOrderDeployerData = Omit<OrderDeployerConfig, 'orderCode'> & { orderCode: string }
+export type GetOrderDeployerData = Omit<OrderDeployerConfig, 'orderCode' | 'jettonWalletCode'> & {
+  orderCode: string;
+  jettonWalletCode: string
+}
 
 export function orderDeployerConfigToCell(config: OrderDeployerConfig): Cell {
   return beginCell()
     .storeAddress(config.admin)
     .storeUint(config.orderId, 32)
     .storeRef(config.orderCode)
+    .storeRef(config.jettonWalletCode)
     .endCell();
 }
 
@@ -40,6 +45,7 @@ export class OrderDeployer implements Contract {
       admin: res.stack.readAddress(),
       orderId: res.stack.readNumber(),
       orderCode: res.stack.readCell().toString(''),
+      jettonWalletCode: res.stack.readCell().toString(''),
     };
   }
 
