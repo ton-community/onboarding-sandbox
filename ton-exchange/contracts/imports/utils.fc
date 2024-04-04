@@ -1,6 +1,9 @@
 #include "stdlib.fc";
 
-() send_grams(slice address, int amount) impure {
+int tons_for_storage() asm "10000000 PUSHINT"; ;; 0.01 TON
+int consumption() asm "15000000 PUSHINT"; ;; 0.015 TON
+
+() send_grams(slice address, int amount) impure inline {
     cell msg = begin_cell()
         .store_uint (0x18, 6) ;; bounce
         .store_slice(address) ;; 267 bit address
