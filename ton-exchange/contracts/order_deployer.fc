@@ -56,10 +56,10 @@
     cell state_init = calculate_order_state_init(my_address(), order_id, order_code, jetton_wallet_code);
     slice new_order_address = calculate_order_address(state_init);
 
+    throw_unless(900, msg_value > 4 * (fwd_fee + consumption()));
+
     ;; reserve tons for deploy
     msg_value -= (fwd_fee + consumption());
-
-    throw_unless(900, msg_value > 0)
 
     ;; notify about new order
     builder log = begin_cell()
@@ -89,8 +89,6 @@
     ;; reserve forward fee
     int forward_ton_amount = fwd_fee + consumption();
     msg_value -= forward_ton_amount;
-
-    throw_unless(900, msg_value > 1)
 
     ;; send jetton to orders wallet
     var order_wallet_msg_body = begin_cell()
