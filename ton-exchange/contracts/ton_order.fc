@@ -1,0 +1,125 @@
+#include "imports/constants.fc";
+#include "imports/stdlib.fc";
+#include "imports/ton-order/utils.fc";
+#include "imports/ton-order/opcodes.fc";
+
+(int, int, int, int, int, slice, slice, slice, cell, cell, int) load_data() inline {
+    slice ds = get_data().begin_parse();
+    return (
+        ds~load_uint(3), ;; status (0 - not inited, 1 - inited, 2 - filled, 3 - closed, 4 - expired)
+        ds~load_uint(1), ;; side (0 - buy or 1 - sell)
+        ds~load_uint(64), ;; quantity
+        ds~load_uint(32), ;; price
+        ds~load_uint(32), ;; order_id
+        ds~load_msg_addr(), ;; deployer_address
+        slice_bits(ds) > 64 ? ds~load_msg_addr() : "", ;; jetton_master_addres,
+        slice_bits(ds) > 64 ? ds~load_msg_addr() : "", ;; creator_address
+        ds~load_ref(), ;; order_code
+        ds~load_ref(), ;; jetton_wallet_code
+        ds~load_uint(64) ;; expiration_time_t
+    );
+}
+
+() save_data(int status, int side, int quantity, int price, int order_id, slice deployer_address, slice creator_address, slice jetton_master_addres, cell order_code, cell jetton_wallet_code, int expiration_time_t) impure {
+    set_data(pack_ton_order_data(status, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_addres, order_code, jetton_wallet_code, expiration_time_t));
+}
+
+() fill_ton_order_by_ton(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
+    throw_unless(911, slice_bits(in_msg_body) == 64 + 64 + 32 + 267 + 267 + 64);
+    var (status, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t) = load_data();
+
+    throw_unless(912, status == status::NOT_INITIALIZED);
+    throw_unless(913, equal_slices(deployer_address, sender_address));
+
+    int query_id = in_msg_body~load_uint(64);
+    quantity = in_msg_body~load_uint(64);
+    price = in_msg_body~load_uint(32);
+    jetton_master_address = in_msg_body~load_msg_addr();
+    creator_address = in_msg_body~load_msg_addr();
+    expiration_time_t = in_msg_body~load_uint(64);
+
+    save_data(status::FILLED, side::BUYER, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
+}
+
+() init_ton_order_by_jetton(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
+    throw_unless(911, slice_bits(in_msg_body) == 64 + 64 + 32 + 267 + 267 + 64);
+    var (status, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t) = load_data();
+
+    throw_unless(912, status == status::NOT_INITIALIZED);
+    throw_unless(913, equal_slices(deployer_address, sender_address));
+
+    int query_id = in_msg_body~load_uint(64);
+    quantity = in_msg_body~load_uint(64);
+    price = in_msg_body~load_uint(32);
+    jetton_master_address = in_msg_body~load_msg_addr();
+    creator_address = in_msg_body~load_msg_addr();
+    expiration_time_t = in_msg_body~load_uint(64);
+
+    save_data(status::INITIALIZED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
+}
+
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    if (in_msg_body.slice_empty?()) {
+        ;; ignore empty messages
+        return ();
+    }
+
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    if (flags & 1) {
+        return (); ;; ignore bounced
+    }
+
+    slice sender_address = cs~load_msg_addr();
+    cs~load_msg_addr();                           ;; skip dst
+    cs~load_coins();                              ;; skip value
+    cs~skip_bits(1);                              ;; skip extracurrency collection
+    cs~load_coins();                              ;; skip ihr_fee
+    int fwd_fee = muldiv(cs~load_coins(), 3, 2);  ;; we use message fwd_fee for estimation of forward_payload costs
+
+    int op = in_msg_body~load_uint(32);
+
+    if (op == op::fill_ton_order_by_ton()) {
+        fill_ton_order_by_ton(in_msg_body, sender_address, msg_value, fwd_fee);
+        return ();
+    }
+    ;;
+    ;;    if (op == op::transfer_notification()) {
+    ;;
+    ;;        slice ds = get_data().begin_parse();
+    ;;        int status = ds~load_uint(3);
+    ;;
+    ;;        if (status == status::INITIALIZED) {
+    ;;            fill_order(in_msg_body, sender_address, msg_value, fwd_fee);
+    ;;            return ();
+    ;;        }
+    ;;
+    ;;        if (status == status::FILLED) {
+    ;;            close_order(in_msg_body, sender_address, msg_value, fwd_fee);
+    ;;            return ();
+    ;;        }
+    ;;
+    ;;        throw(817);
+    ;;    }
+
+    throw(0xffff);
+}
+
+;; handle timer notification from backend
+() recv_external() impure {
+    var (status, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t) = load_data();
+    if ((status != status::FILLED) | (expiration_time_t == 0) | (expiration_time_t > now())) {
+        return ();
+    }
+
+    accept_message();
+
+    ;; TODO this
+
+    save_data(status::EXPIRED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
+}
+
+(int, int, int, int, int, slice, slice, slice, cell, cell, int) get_order_data() method_id {
+    return load_data();
+}
