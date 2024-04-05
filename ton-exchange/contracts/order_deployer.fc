@@ -50,16 +50,21 @@
 
     ;; reserve tons for storage and current computations
     int ton_balance_before_msg = my_ton_balance - msg_value;
-    int storage_fee = tons_for_storage() - min(ton_balance_before_msg, tons_for_storage());
-    msg_value -= (storage_fee + consumption());
+    int storage_fee = fee::tons_for_storage() - min(ton_balance_before_msg, fee::tons_for_storage());
+    msg_value -= (storage_fee + fee::deployer::create_consumption());
+
+    raw_reserve(fee::tons_for_storage(), 0);
 
     cell state_init = calculate_order_state_init(my_address(), order_id, order_code, jetton_wallet_code);
     slice new_order_address = calculate_order_address(state_init);
 
-    throw_unless(900, msg_value > 4 * (fwd_fee + consumption()));
+    ;; deploy + forward_fee + (transfer + internal_transfer + notification)
+    int coins_for_deploy = fwd_fee + fee::order::create_consumption() + fee::tons_for_storage();
+    int forward_ton_amount = fwd_fee + fee::order::fill_consumption();
+    throw_unless(900, msg_value > coins_for_deploy + forward_ton_amount + 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage()));
 
     ;; reserve tons for deploy
-    msg_value -= (fwd_fee + consumption());
+    msg_value -= coins_for_deploy;
 
     ;; notify about new order
     builder log = begin_cell()
@@ -77,18 +82,14 @@
     var msg = begin_cell()
         .store_uint(0x18, 6)
         .store_slice(new_order_address)
-        .store_coins(fwd_fee + consumption())
+        .store_coins(coins_for_deploy)
         .store_uint(0, 1 + 4 + 4 + 64 + 32)
         .store_uint(1, 1)
         .store_uint(1, 1)
         .store_ref(state_init)
         .store_uint(1, 1)
         .store_ref(msg_body);
-    send_raw_message(msg.end_cell(), 2);
-
-    ;; reserve forward fee
-    int forward_ton_amount = fwd_fee + consumption();
-    msg_value -= forward_ton_amount;
+    send_raw_message(msg.end_cell(), 0);
 
     ;; send jetton to orders wallet
     var order_wallet_msg_body = begin_cell()
