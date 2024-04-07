@@ -6,3 +6,6 @@ int op::internal_transfer() asm "0x178d4519 PUSHINT";
 int op::excesses() asm "0xd53276db PUSHINT";
 int op::burn() asm "0x595f07bc PUSHINT";
 int op::burn_notification() asm "0x7bdd97de PUSHINT";
+
+;; Minter
+int op::mint() asm "21 PUSHINT";
