@@ -47,7 +47,7 @@
 
     ;; deploy and fill ton order
     var msg_body = begin_cell()
-        .store_uint(op::fill_ton_order_by_ton(), 32)
+        .store_uint(op::init_ton_order(), 32)
         .store_uint(query_id, 64)
         .store_uint(quantity, 64)
         .store_uint(price, 32)

@@ -69,6 +69,8 @@ export class JettonWallet implements Contract {
 
     if (opts.forwardPayload) {
       builder.storeSlice(opts.forwardPayload);
+    } else {
+      builder.storeUint(0, 1);
     }
 
     await provider.internal(via, {

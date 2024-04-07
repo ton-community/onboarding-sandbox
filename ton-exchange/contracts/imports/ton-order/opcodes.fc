@@ -1,4 +1,3 @@
 int op::create_ton_order() asm "0x26DE17E2 PUSHINT";
-int op::fill_ton_order_by_ton() asm "0x26DE17E3 PUSHINT";
-int op::init_ton_order_by_jetton() asm "0x26DE17E4 PUSHINT";
-int op::fill_ton_order() asm "0x26DE17E5 PUSHINT";
+int op::init_ton_order() asm "0x26DE17E3 PUSHINT";
+int op::close_ton_order() asm "0x26DE17E4 PUSHINT";
