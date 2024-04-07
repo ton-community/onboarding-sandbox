@@ -103,7 +103,6 @@
 
     slice either_forward_payload = in_msg_body;
     throw_unless(822, slice_bits(either_forward_payload) == 1 + 32); ;; side, price
-    throw_if_fill_order_payload_invalid(821, either_forward_payload);
 
     int user_side = either_forward_payload~load_uint(1);
     int user_price = either_forward_payload~load_uint(32);
