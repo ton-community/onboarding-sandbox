@@ -56,7 +56,10 @@
 
     slice either_forward_payload = in_msg_body;
 
-    throw_unless(827, equal_slices(deployer_address, from_address));
+    int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
+    int forward_payload_value = fwd_fee + fee::jetton::consumption();
+    throw_unless_excesses(827, equal_slices(deployer_address, from_address), query_id, jetton_amount, from_address, sender_address, 
+                                from_address, transfer_fee, forward_payload_value);
 
     slice base_jetton_slice = either_forward_payload~load_ref().begin_parse();
     base_jetton_address = base_jetton_slice~load_msg_addr();
@@ -65,32 +68,13 @@
     price = either_forward_payload~load_uint(32);
     expiration_time_t = either_forward_payload~load_uint(64);
 
-    throw_unless(819, (side == side::SELLER) | (side == side::BUYER));
+    int is_correct_side = (side == side::SELLER) | (side == side::BUYER);
+    throw_unless_excesses(819, is_correct_side, query_id, jetton_amount, from_address, sender_address, 
+                                from_address, transfer_fee, forward_payload_value);
 
     wallet_address = sender_address;
     quantity = calculate_quantity(side, jetton_amount, price);
     save_data(status::FILLED, base_jetton_address, quote_jetton_address, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code, expiration_time_t);
-}
-
-() send_tokens(int query_id, int amount, slice to_address, slice from_address, slice excesses_address, int msg_value, int forward_payload_value) impure inline {
-    var msg_body = begin_cell()
-        .store_uint(op::transfer(), 32)
-        .store_uint(query_id, 64)
-        .store_coins(amount)
-        .store_slice(to_address)
-        .store_slice(excesses_address)      ;; response_address for excesses
-        .store_uint(0, 1)                   ;; empty custom payload
-        .store_coins(forward_payload_value)               ;; forward_ton_amount TODO: need to calculate how many coins are neede to forwarded
-        .store_uint(0, 8);                  ;; empty payload
-
-    var msg = begin_cell()
-        .store_uint(0x10, 6)
-        .store_slice(from_address)          ;; who closes order jetton wallet address
-        .store_coins(msg_value)
-        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-        .store_ref(msg_body.end_cell());
-
-    send_raw_message(msg.end_cell(), 2);
 }
 
 () close_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
@@ -106,41 +90,47 @@
     int user_side = either_forward_payload~load_uint(1);
     int user_price = either_forward_payload~load_uint(32);
 
-    throw_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? quote_wallet_address : base_wallet_address, jetton_wallet_code);
-
-    throw_unless(824, side == side::SELLER ? user_side == side::BUYER : user_side == side::SELLER);
-    throw_unless(825, price == user_price);
-
-    int user_quantity = calculate_quantity(user_side, jetton_amount, user_price);
-    int total_quantity = min(user_quantity, quantity);
-
     ;; transfer + internal_transfer + notification
     int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
     int forward_payload_value = fwd_fee + fee::jetton::consumption();
+
+    int fraud = check_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? quote_wallet_address : base_wallet_address, jetton_wallet_code);
+    throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address, 
+                                from_address, transfer_fee, forward_payload_value);
+
+    int is_correct_side = (side == side::SELLER ? user_side == side::BUYER : user_side == side::SELLER);
+    throw_unless_excesses(824, is_correct_side , query_id, jetton_amount, from_address, sender_address, 
+                                from_address, transfer_fee, forward_payload_value);
+    throw_unless_excesses(825, price == user_price, query_id, jetton_amount, from_address, sender_address, 
+                                from_address, transfer_fee, forward_payload_value);
+
+    int user_quantity = calculate_quantity(user_side, jetton_amount, user_price);
+    int total_quantity = min(user_quantity, quantity);
 
     ;; remainder
     user_quantity -= total_quantity;
 
     ;; exchange + current consumption
     int total_consumption = (user_quantity > 0) ? 3 : 2 * (transfer_fee + forward_payload_value) + fee::order::close_consumption();
-    throw_unless(950, msg_value > total_consumption);
+    throw_unless_excesses(950, msg_value > total_consumption, query_id, jetton_amount, from_address, sender_address, 
+                                from_address, transfer_fee, forward_payload_value);
 
     if (side == side::SELLER) {
         ;; buy order
-        send_tokens(query_id, total_quantity * user_price, creator_address, sender_address, from_address, transfer_fee, forward_payload_value);
-        send_tokens(query_id, total_quantity, from_address, wallet_address, from_address, transfer_fee, forward_payload_value);
+        send_jettons(query_id, total_quantity * user_price, creator_address, sender_address, from_address, transfer_fee, forward_payload_value);
+        send_jettons(query_id, total_quantity, from_address, wallet_address, from_address, transfer_fee, forward_payload_value);
     } else {
         ;; sell order
-        send_tokens(query_id, total_quantity, creator_address, sender_address, from_address, transfer_fee, forward_payload_value);
-        send_tokens(query_id, total_quantity * price, from_address, wallet_address, from_address, transfer_fee, forward_payload_value);
+        send_jettons(query_id, total_quantity, creator_address, sender_address, from_address, transfer_fee, forward_payload_value);
+        send_jettons(query_id, total_quantity * price, from_address, wallet_address, from_address, transfer_fee, forward_payload_value);
     }
 
     if (user_quantity > 0) {
         ;; return jetton excess
         if (user_side == side::SELLER) {
-            send_tokens(query_id, user_quantity, from_address, sender_address, from_address, transfer_fee, forward_payload_value);
+            send_jettons(query_id, user_quantity, from_address, sender_address, from_address, transfer_fee, forward_payload_value);
         } else {
-            send_tokens(query_id, user_quantity * user_price, from_address, sender_address, from_address, transfer_fee, forward_payload_value);
+            send_jettons(query_id, user_quantity * user_price, from_address, sender_address, from_address, transfer_fee, forward_payload_value);
         }
     }
 
@@ -160,7 +150,8 @@
     if (quantity < 0)
     {
         ;; smth goes wrong
-        throw(100);
+        throw_unless_excesses(1000, 0, query_id, jetton_amount, from_address, sender_address, 
+                                from_address, transfer_fee, forward_payload_value);
     }
 
     if (quantity != 0)
@@ -241,7 +232,7 @@
         var [balance, _] = get_balance();
 
         ;; query id?
-        send_tokens(0, quantity, creator_address, jetton_wallet_addres, creator_address, balance, 10000000);
+        send_jettons(0, quantity, creator_address, jetton_wallet_addres, creator_address, balance, 10000000);
     }
 
     save_data(status::EXPIRED, base_jetton_address, quote_jetton_address, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code, expiration_time_t);

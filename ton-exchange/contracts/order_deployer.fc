@@ -90,10 +90,18 @@
     int side = payload~load_uint(1);
     int price = payload~load_uint(32);
 
+    int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
+    int forward_payload_value = fwd_fee + fee::jetton::consumption();
+
     ;; instead of order create jetton wallet address we use order deployer
     ;; jetton wallet address because it will be the same currency
-    throw_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? base_jetton_address : quote_jetton_address, jetton_wallet_code);
-    throw_unless(715, side == side::SELLER & (jetton_amount ^% price == 0));
+    int fraud = check_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? base_jetton_address : quote_jetton_address, jetton_wallet_code);
+    throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address, 
+                                from_address, transfer_fee, forward_payload_value);
+
+    throw_unless_excesses(715, side == side::SELLER & (jetton_amount ^% price == 0), 
+                                query_id, jetton_amount, from_address, sender_address, 
+                                from_address, transfer_fee, forward_payload_value);
 
     ;; reserve tons for storage and current computations
     int ton_balance_before_msg = my_ton_balance - msg_value;
@@ -108,7 +116,10 @@
     ;; deploy + forward_fee + (transfer + internal_transfer + notification)
     int coins_for_deploy = fwd_fee + fee::order::create_consumption() + fee::tons_for_storage();
     int forward_ton_amount = fwd_fee + fee::order::fill_consumption();
-    throw_unless(900, msg_value > coins_for_deploy + forward_ton_amount + 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage()));
+
+    int is_msg_value_ok = msg_value > coins_for_deploy + forward_ton_amount + 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
+    throw_unless_excesses(900, is_msg_value_ok, query_id, jetton_amount, from_address, sender_address, 
+                                from_address, transfer_fee, forward_payload_value);
 
     ;; reserve tons for deploy
     msg_value -= coins_for_deploy;
