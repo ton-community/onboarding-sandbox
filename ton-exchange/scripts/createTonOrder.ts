@@ -10,15 +10,19 @@ export async function run(provider: NetworkProvider) {
   const jettonWallet = provider.open(JettonWallet.createFromAddress(jettonWalletAddress));
 
   await jettonWallet.sendTransfer(provider.sender(), {
-    value: toNano(1),
-    fwdAmount: toNano(0.2),
+    value: toNano(2),
+    fwdAmount: toNano(0.5),
     queryId: 9,
     jettonAmount: 1n,
     toAddress: orderDeployerAddress,
     forwardPayload: beginCell()
-      .storeAddress(jettonWalletMasterAddress)
-      .storeUint(10, 32)
-      .storeUint(Math.ceil(Date.now()/ 1000) + 1000, 64)
+      .storeUint(0x26DE15E2, 32)
+      .storeRef(beginCell()
+        .storeAddress(jettonWalletMasterAddress)
+        .storeUint(10, 32)
+        .storeUint(Math.ceil(Date.now() / 1000) + 1000, 64)
+        .endCell(),
+      )
       .endCell()
       .asSlice(),
   });

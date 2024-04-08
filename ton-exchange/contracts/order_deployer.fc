@@ -84,10 +84,9 @@
 
     var (owner_address, order_id, order_code, jetton_wallet_code, ton_order_code) = load_data();
 
-    slice payload = either_forward_payload; ;; copy for extracting
-    slice base_jetton_slice = payload~load_ref().begin_parse();
-    slice base_jetton_address = base_jetton_slice~load_msg_addr();
-    slice quote_jetton_address = base_jetton_slice~load_msg_addr();
+    slice payload = either_forward_payload~load_ref().begin_parse(); ;; copy for extracting
+    slice base_jetton_address = payload~load_msg_addr();
+    slice quote_jetton_address = payload~load_msg_addr();
     int side = payload~load_uint(1);
     int price = payload~load_uint(32);
 
@@ -161,7 +160,7 @@
     save_data(owner_address, order_id + 1, order_code, jetton_wallet_code, ton_order_code);
 }
 
-() create_ton_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
+() create_ton_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee, int my_ton_balance) impure inline {
     int query_id = in_msg_body~load_uint(64);
     int jetton_amount = in_msg_body~load_coins();
     slice from_address = in_msg_body~load_msg_addr(); ;; jetton's owner address - order creator
