@@ -81,7 +81,7 @@ describe('TonOrder', () => {
 
   it('should deploy', async () => {
     const expirationTime = Math.ceil(Date.now() / 1000) + 1000;
-    const side = 1;
+    const side = 0;
     const price = 10;
 
     await order.sendDeploy(deployer.getSender(), toNano(1), {

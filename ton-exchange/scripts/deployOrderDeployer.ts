@@ -8,13 +8,9 @@ export async function run(provider: NetworkProvider) {
     orderId: 0,
     orderCode: await compile('Order'),
     jettonWalletCode: await compile('JettonWallet'),
+    tonOrderCode: await compile('TonOrder'),
   }, await compile('OrderDeployer')));
 
-  //const res = await orderDeployer.getOrderAddress(0);
-  //console.log(res);
   await orderDeployer.sendDeploy(provider.sender(), toNano('0.05'));
-
   await provider.waitForDeploy(orderDeployer.address);
-
-  // run methods on `orderDeployer`
 }

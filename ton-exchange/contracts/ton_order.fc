@@ -83,10 +83,13 @@
 
     ;; if side is seller that means that order is still waiting for jetton to come in
     ;; is side is buyer that means that order is filled
-    if (side == side::BUYER) {
+    if (side == side::SELLER) {
         save_data(status::INITIALIZED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
     } else {
         ;; TODO improve toncoin validation, return exceeses
+
+        ~dump(quantity * price + 2 * fwd_fee);
+        ~dump(msg_value);
         throw_unless(921, msg_value > quantity * price + 2 * fwd_fee);
         save_data(status::FILLED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
     }
@@ -96,7 +99,7 @@
     var (status, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t) = load_data();
     throw_if_jetton_wallet_fraud_detected(sender_address, jetton_master_address, jetton_wallet_code);
 
-    throw_unless(937, side == side::SELLER);
+    throw_unless(937, side == side::BUYER);
 
     int query_id = in_msg_body~load_uint(64);
     int jetton_amount = in_msg_body~load_coins();
@@ -132,14 +135,11 @@
 }
 
 
-
-
-
 () close_order_by_ton(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
     var (status, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t) = load_data();
 
     throw_unless(931, status == status::FILLED);
-    throw_unless(932, side == side::BUYER);
+    throw_unless(932, side == side::SELLER);
     ;; TODO improve ton validation
     throw_unless(933, msg_value > quantity * price + 2 * fwd_fee);
     throw_unless(934, slice_bits(in_msg_body) == 64); ;; query_id

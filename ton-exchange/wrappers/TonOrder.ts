@@ -35,6 +35,10 @@ export class TonOrder implements Contract {
   constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {
   }
 
+  static createFromAddress(address: Address) {
+    return new TonOrder(address);
+  }
+
   static createFromConfig(config: TonOrderConfig, code: Cell, workchain = 0) {
     const data = tonOrderConfigToCell(config);
     const init = { code, data };

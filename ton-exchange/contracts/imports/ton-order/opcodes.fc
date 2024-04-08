@@ -1,3 +1,6 @@
+int op::notification::create_order() asm "0x26DE15E1 PUSHINT";
+int op::notification::create_ton_order() asm "0x26DE15E2 PUSHINT";
+
 int op::create_ton_order() asm "0x26DE17E2 PUSHINT";
 int op::init_ton_order() asm "0x26DE17E3 PUSHINT";
 int op::close_ton_order() asm "0x26DE17E4 PUSHINT";
