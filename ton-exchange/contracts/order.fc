@@ -141,10 +141,10 @@
         var msg_excesses = begin_cell()
             .store_uint(0x10, 6)
             .store_slice(from_address)
-            .store_coins(0)
-            .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+            .store_coins(msg_value)
+            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
             .store_int(0, 8); ;; simple transfer to wallet
-        send_raw_message(msg_excesses.end_cell(), 64);
+        send_raw_message(msg_excesses.end_cell(), 2);
     }
 
     ;; self destruct
@@ -152,7 +152,7 @@
         .store_uint(0x10, 6)
         .store_slice(creator_address)
         .store_coins(0)
-        .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
         .store_int(0, 8); ;; simple transfer to wallet
     send_raw_message(msg_destruct.end_cell(), 128);
 
