@@ -1,5 +1,5 @@
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
-import { Cell, toNano } from '@ton/core';
+import { Cell, toNano, Address } from '@ton/core';
 import { OrderDeployer } from '../wrappers/OrderDeployer';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
@@ -18,7 +18,12 @@ describe('OrderDeployer', () => {
     beforeEach(async () => {
         blockchain = await Blockchain.create();
 
-        orderDeployer = blockchain.openContract(OrderDeployer.createFromConfig({}, code));
+        orderDeployer = blockchain.openContract(OrderDeployer.createFromConfig({
+            admin: Address.parse('0QA__NJI1SLHyIaG7lQ6OFpAe9kp85fwPr66YwZwFc0p5wIu'),
+            orderId: 0,
+            orderCode: await compile('Order'),
+            jettonWalletCode: await compile('JettonWallet'),
+          }, code));
 
         deployer = await blockchain.treasury('deployer');
 
