@@ -160,7 +160,7 @@
     save_data(owner_address, order_id + 1, order_code, jetton_wallet_code, ton_order_code);
 }
 
-() create_ton_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee, int my_ton_balance) impure inline {
+() create_ton_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
     int query_id = in_msg_body~load_uint(64);
     int jetton_amount = in_msg_body~load_coins();
     slice from_address = in_msg_body~load_msg_addr(); ;; jetton's owner address - order creator
