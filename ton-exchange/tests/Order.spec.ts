@@ -33,6 +33,7 @@ describe('Order', () => {
   let buyerSecondJettonWallet: SandboxContract<JettonWallet>;
 
   let jettonAmount = 100000n;
+  let jettonToSell = 100n;
 
   beforeAll(async () => {
     blockchain = await Blockchain.create();
@@ -114,11 +115,11 @@ describe('Order', () => {
   it('should fill after deploy', async () => {
     const expirationTime = Math.ceil(Date.now() / 1000) + 1000;
     const side = 0;
-    const price = 1;
+    const price = 5;
 
     // emulating that it was sent from deployer
     await deployerFirstJettonWaller.sendTransfer(deployer.getSender(), {
-      jettonAmount,
+      jettonAmount: jettonToSell,
       queryId: 9,
       toAddress: order.address,
       value: toNano(1),
@@ -145,15 +146,17 @@ describe('Order', () => {
     expect(orderData.expirationTime).toEqual(expirationTime);
 
     const orderJettonAmount = await orderFirstJettonWaller.getWalletJettonAmount();
-    expect(orderJettonAmount).toEqual(jettonAmount);
+    expect(orderJettonAmount).toEqual(jettonToSell);
   });
 
-  it('should close', async () => {
+  it('should partially close', async () => {
     const side = 1;
-    const price = 1;
+    const price = 5;
 
+    let jettonToBuy = 300n;
+    
     const res = await buyerSecondJettonWallet.sendTransfer(buyer.getSender(), {
-      jettonAmount,
+      jettonAmount: jettonToBuy,
       queryId: 9,
       toAddress: order.address,
       value: toNano(1),
@@ -166,19 +169,54 @@ describe('Order', () => {
     });
 
     const orderData = await order.getOrderData();
-
-    expect(orderData.status).toEqual(3);
+    expect(orderData.status).toEqual(2); // partial closing
 
     const orderFirstJettonAmount = await orderFirstJettonWaller.getWalletJettonAmount();
-    expect(orderFirstJettonAmount).toEqual(0n);
+    expect(orderFirstJettonAmount).toEqual(40n); // (price*jettonToSell-jettonToBuy)/price
 
     const buyerFirstJettonAmount = await buyerFirstJettonWallet.getWalletJettonAmount();
-    expect(buyerFirstJettonAmount).toEqual(jettonAmount);
-
-    const sellerSecondJettonAmount = await sellerSecondJettonWallet.getWalletJettonAmount();
-    expect(sellerSecondJettonAmount).toEqual(jettonAmount);
+    expect(buyerFirstJettonAmount).toEqual(60n); // jettonToBuy / price
 
     const buyerSecondJettonAmount = await buyerSecondJettonWallet.getWalletJettonAmount();
-    expect(buyerSecondJettonAmount).toEqual(0n);
+    expect(buyerSecondJettonAmount).toEqual(jettonAmount - jettonToBuy);
+
+    const sellerSecondJettonAmount = await sellerSecondJettonWallet.getWalletJettonAmount();
+    expect(sellerSecondJettonAmount).toEqual(jettonToBuy);
   });
+
+  it('should fully close', async () => {
+    const side = 1;
+    const price = 5;
+
+    let jettonToBuy = 200n;
+    
+    const res = await buyerSecondJettonWallet.sendTransfer(buyer.getSender(), {
+      jettonAmount: jettonToBuy,
+      queryId: 9,
+      toAddress: order.address,
+      value: toNano(1),
+      fwdAmount: toNano(0.2),
+      forwardPayload: beginCell()
+        .storeUint(side, 1)
+        .storeUint(price, 32)
+        .endCell()
+        .asSlice(),
+    });
+
+    const orderData = await order.getOrderData();
+    expect(orderData.status).toEqual(3); // partial closing
+
+    const orderFirstJettonAmount = await orderFirstJettonWaller.getWalletJettonAmount();
+    expect(orderFirstJettonAmount).toEqual(40n - 40n);
+
+    const buyerFirstJettonAmount = await buyerFirstJettonWallet.getWalletJettonAmount();
+    expect(buyerFirstJettonAmount).toEqual(60n + 40n);
+
+    const buyerSecondJettonAmount = await buyerSecondJettonWallet.getWalletJettonAmount();
+    expect(buyerSecondJettonAmount).toEqual(jettonAmount - 500n);
+
+    const sellerSecondJettonAmount = await sellerSecondJettonWallet.getWalletJettonAmount();
+    expect(sellerSecondJettonAmount).toEqual(500n);
+  });
+
 });
