@@ -112,32 +112,41 @@
     throw_unless(825, price == user_price);
 
     int user_quantity = calculate_quantity(user_side, jetton_amount, user_price);
-    throw_unless(826, quantity == user_quantity);
+    int total_quantity = min(user_quantity, quantity);
 
     ;; transfer + internal_transfer + notification
     int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
     int forward_payload_value = fwd_fee + fee::jetton::consumption();
 
+    ;; remainder
+    user_quantity -= total_quantity;
+
     ;; exchange + current consumption
-    int total_consumption = 2 * (transfer_fee + forward_payload_value) + fee::order::close_consumption();
+    int total_consumption = (user_quantity > 0) ? 3 : 2 * (transfer_fee + forward_payload_value) + fee::order::close_consumption();
     throw_unless(950, msg_value > total_consumption);
 
-    if (side == side::SELLER) ;; buy order
-    {
-        send_tokens(query_id, user_quantity * user_price, creator_address, sender_address, from_address, transfer_fee, forward_payload_value);
-        send_tokens(query_id, quantity, from_address, wallet_address, from_address, transfer_fee, forward_payload_value);
-    }
-    else
-    {
+    if (side == side::SELLER) {
+        ;; buy order
+        send_tokens(query_id, total_quantity * user_price, creator_address, sender_address, from_address, transfer_fee, forward_payload_value);
+        send_tokens(query_id, total_quantity, from_address, wallet_address, from_address, transfer_fee, forward_payload_value);
+    } else {
         ;; sell order
-        send_tokens(query_id, user_quantity, creator_address, sender_address, from_address, transfer_fee, forward_payload_value);
-        send_tokens(query_id, quantity * price, from_address, wallet_address, from_address, transfer_fee, forward_payload_value);
+        send_tokens(query_id, total_quantity, creator_address, sender_address, from_address, transfer_fee, forward_payload_value);
+        send_tokens(query_id, total_quantity * price, from_address, wallet_address, from_address, transfer_fee, forward_payload_value);
     }
 
-    ;; current excesses
+    if (user_quantity > 0) {
+        ;; return jetton excess
+        if (user_side == side::SELLER) {
+            send_tokens(query_id, user_quantity, from_address, sender_address, from_address, transfer_fee, forward_payload_value);
+        } else {
+            send_tokens(query_id, user_quantity * user_price, from_address, sender_address, from_address, transfer_fee, forward_payload_value);
+        }
+    }
+
+    ;; current user toncoin excesses
     msg_value -= total_consumption;
-    if (msg_value > 0)
-    {
+    if (msg_value > 0) {
         var msg_excesses = begin_cell()
             .store_uint(0x10, 6)
             .store_slice(from_address)
@@ -147,7 +156,20 @@
         send_raw_message(msg_excesses.end_cell(), 2);
     }
 
-    ;; self destruct
+    quantity -= total_quantity;
+    if (quantity < 0)
+    {
+        ;; smth goes wrong
+        throw(100);
+    }
+
+    if (quantity != 0)
+    {
+        save_data(status, base_wallet_address, quote_wallet_address, side, quantity, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code, expiration_time_t);
+        return ();
+    }
+
+    ;; self destruct, quantity == 0
     var msg_destruct = begin_cell()
         .store_uint(0x10, 6)
         .store_slice(creator_address)
