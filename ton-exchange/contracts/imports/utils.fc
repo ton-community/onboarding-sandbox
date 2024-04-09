@@ -1,4 +1,5 @@
 #include "stdlib.fc";
+#include "opcodes.fc";
 
 int fee::tons_for_storage() asm "10000000 PUSHINT"; ;; 0.01 TON
 int fee::jetton::consumption() asm "16000000 PUSHINT"; ;; 0.016 TON
