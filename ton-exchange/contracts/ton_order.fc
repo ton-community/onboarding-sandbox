@@ -119,7 +119,7 @@
     send_ton(query_id, from_address, ton_amount);
     msg_value -= fwd_fee;
 
-    send_tokens(query_id, quantity, creator_address, order_jetton_wallet_address, sender_address, msg_value, fwd_fee + fee::jetton::consumption() + fee::tons_for_storage());
+    send_tokens(query_id, quantity, creator_address, order_jetton_wallet_address, from_address, msg_value, fwd_fee + fee::jetton::consumption() + fee::tons_for_storage());
 
     save_data(status::CLOSED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
 }
@@ -160,14 +160,11 @@
 
     ;; reserve tons for storage and current computations
 
-    int jetton_fwd_cost = 3 * fwd_fee + 2 * (fee::jetton::consumption() +  2 * fee::tons_for_storage());
-    ~dump(jetton_fwd_cost);
-    send_tokens(query_id, quantity, sender_address, order_jetton_wallet_address, sender_address, jetton_fwd_cost, fwd_fee + fee::jetton::consumption() +  2 * fee::tons_for_storage());
-
-    ~dump(msg_value);
-    msg_value -= jetton_fwd_cost;
-    ~dump(msg_value);
+    int ton_amount = quantity * price + fwd_fee;
     send_ton(query_id, creator_address, msg_value);
+    msg_value -= ton_amount;
+
+    send_tokens(query_id, quantity, sender_address, order_jetton_wallet_address, sender_address, msg_value, fwd_fee + fee::jetton::consumption() +  2 * fee::tons_for_storage());
 
     save_data(status::CLOSED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
 }
