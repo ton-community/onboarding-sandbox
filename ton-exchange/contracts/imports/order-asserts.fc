@@ -13,3 +13,9 @@
     slice calculated_jetton_wallet_address = calculate_jetton_wallet_address(jetton_wallet_state_init);
     throw_unless(899, equal_slices(provided_address, calculated_jetton_wallet_address));
 }
+
+(int) check_if_jetton_wallet_fraud_detected(slice provided_address, slice jetton_wallet_master_address, cell jetton_wallet_code) impure inline {
+    cell jetton_wallet_state_init = calculate_jetton_wallet_state_init(my_address(), jetton_wallet_master_address, jetton_wallet_code);
+    slice calculated_jetton_wallet_address = calculate_jetton_wallet_address(jetton_wallet_state_init);
+    return equal_slices(provided_address, calculated_jetton_wallet_address) == 0; ;; false
+}
