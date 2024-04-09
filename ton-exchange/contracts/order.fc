@@ -84,15 +84,16 @@
     int jetton_amount = in_msg_body~load_coins();
     slice from_address = in_msg_body~load_msg_addr();
 
-    slice either_forward_payload = in_msg_body;
-    throw_unless(822, slice_bits(either_forward_payload) == 1 + 32); ;; side, price
-
-    int user_side = either_forward_payload~load_uint(1);
-    int user_price = either_forward_payload~load_uint(32);
-
     ;; transfer + internal_transfer + notification
     int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
     int forward_payload_value = fwd_fee + fee::jetton::consumption();
+    
+    slice either_forward_payload = in_msg_body;
+    throw_unless_excesses(822, slice_bits(either_forward_payload) == 1 + 32, query_id, jetton_amount, from_address, sender_address, 
+                                from_address, transfer_fee, forward_payload_value); ;; side, price
+
+    int user_side = either_forward_payload~load_uint(1);
+    int user_price = either_forward_payload~load_uint(32);
 
     int fraud = check_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? quote_wallet_address : base_wallet_address, jetton_wallet_code);
     throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address, 

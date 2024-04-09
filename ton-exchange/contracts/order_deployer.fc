@@ -40,7 +40,11 @@
     int price = in_msg_body~load_uint(32);
     int expiration_time_t = in_msg_body~load_uint(64);
 
-    throw_unless(915, ton_amount ^% price == 0);
+    ;; transfer + internal_transfer + notification
+    int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
+    int forward_payload_value = fwd_fee + fee::jetton::consumption();
+
+    throw_unless_toncoins_excesses(915, ton_amount ^% price == 0, sender_address, ton_amount + fwd_fee + fee::jetton::consumption());
 
     int quantity = ton_amount / price;
 
@@ -183,7 +187,13 @@
     int price = payload~load_uint(32);
     int expiration_time_t = payload~load_uint(64);
 
-    throw_if_jetton_wallet_fraud_detected(sender_address, jetton_master_address, jetton_wallet_code);
+    ;; transfer + internal_transfer + notification
+    int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
+    int forward_payload_value = fwd_fee + fee::jetton::consumption();
+
+    int fraud = check_if_jetton_wallet_fraud_detected(sender_address, jetton_master_address, jetton_wallet_code);
+    throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address, 
+                                from_address, transfer_fee, forward_payload_value);
 
     int quantity = jetton_amount;
     cell state_init = calculate_ton_order_state_init(my_address(), order_id, ton_order_code, jetton_wallet_code);

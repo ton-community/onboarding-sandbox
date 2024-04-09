@@ -28,12 +28,32 @@ int fee::order::close_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
     send_raw_message(msg.end_cell(), 2);
 }
 
+() send_toncoins(slice to_address, int msg_value) impure inline {
+    var msg = begin_cell()
+        .store_uint(0x10, 6)
+        .store_slice(to_address)
+        .store_coins(msg_value)
+        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1);
+
+    send_raw_message(msg.end_cell(), 2);
+}
+
 () throw_unless_excesses(int exit_code, int cond, int query_id, int amount, slice to_address, slice from_address, slice excesses_address, int msg_value, int forward_payload_value) impure inline {
     if (cond != 0) { ;; if cond == true
         return ();
     }
 
     send_jettons(query_id, amount, to_address, from_address, excesses_address, msg_value, forward_payload_value);
+
+    throw(exit_code);
+}
+
+() throw_unless_toncoins_excesses(int exit_code, int cond, slice to_address, int msg_value) impure inline {
+    if (cond != 0) { ;; if cond == true
+        return ();
+    }
+
+    send_toncoins(to_address, msg_value);
 
     throw(exit_code);
 }
