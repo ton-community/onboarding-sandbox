@@ -1,7 +1,9 @@
 #include "imports/constants.fc";
 #include "imports/jetton-utils.fc";
 #include "imports/stdlib.fc";
+#include "imports/utils.fc";
 #include "imports/ton-order/utils.fc";
+#include "imports/ton-order/fees.fc";
 #include "imports/ton-order/opcodes.fc";
 #include "imports/opcodes.fc";
 #include "imports/order-asserts.fc";
@@ -35,17 +37,17 @@
         .store_slice(to_address)
         .store_slice(excesses_address)      ;; response_address for excesses
         .store_uint(0, 1)                   ;; empty custom payload
-        .store_coins(fwd_fee)               ;; forward_ton_amount TODO: need to calculate how many coins are neede to forwarded
+        .store_coins(fwd_fee)               ;; forward_ton_amount
         .store_uint(0, 8);                  ;; empty payload
 
     var msg = begin_cell()
         .store_uint(0x10, 6)
         .store_slice(from_address)          ;; who closes order jetton wallet address
-        .store_coins(msg_value - 2 * fwd_fee)
+        .store_coins(msg_value)
         .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
         .store_ref(msg_body.end_cell());
 
-    send_raw_message(msg.end_cell(), 1);
+    send_raw_message(msg.end_cell(), 0);
 }
 
 () send_ton(int query_id, slice to_address, int ton_amount) impure inline {
@@ -61,7 +63,7 @@
         .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
         .store_ref(mgs_body);
 
-    send_raw_message(msg.end_cell(), 1);
+    send_raw_message(msg.end_cell(), 0);
 }
 
 
@@ -86,16 +88,11 @@
     if (side == side::SELLER) {
         save_data(status::INITIALIZED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
     } else {
-        ;; TODO improve toncoin validation, return exceeses
-
-        ~dump(quantity * price + 2 * fwd_fee);
-        ~dump(msg_value);
-        throw_unless(921, msg_value > quantity * price + 2 * fwd_fee);
         save_data(status::FILLED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
     }
 }
 
-() close_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
+() close_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee, int my_ton_balance) impure inline {
     var (status, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t) = load_data();
     throw_if_jetton_wallet_fraud_detected(sender_address, jetton_master_address, jetton_wallet_code);
 
@@ -107,14 +104,22 @@
 
     throw_unless(928, jetton_amount == quantity);
 
+    ;; reserve tons for storage and current computations
+    int ton_balance_before_msg = my_ton_balance - msg_value;
+    int storage_fee = fee::tons_for_storage() - min(ton_balance_before_msg, fee::tons_for_storage());
+    msg_value -= (storage_fee + fee::ton_order::close_consumption());
+
+    throw_unless(948, msg_value > 4 * fwd_fee + 2 * (fee::jetton::consumption() +  fee::tons_for_storage()));
+
     cell jetton_wallet_state_init = calculate_jetton_wallet_state_init(my_address(), jetton_master_address, jetton_wallet_code);
     slice order_jetton_wallet_address = calculate_jetton_wallet_address(jetton_wallet_state_init);
 
-    ;; TODO: need to calculate excesses correctly
-    int value = msg_value / 2;
+    int ton_amount = fwd_fee + quantity * price;
 
-    send_tokens(query_id, quantity, creator_address, order_jetton_wallet_address, sender_address, value, fwd_fee);
-    send_ton(query_id, from_address, quantity * price);
+    send_ton(query_id, from_address, ton_amount);
+    msg_value -= fwd_fee;
+
+    send_tokens(query_id, quantity, creator_address, order_jetton_wallet_address, sender_address, msg_value, fwd_fee + fee::jetton::consumption() + fee::tons_for_storage());
 
     save_data(status::CLOSED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
 }
@@ -135,25 +140,34 @@
 }
 
 
-() close_order_by_ton(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
+() close_order_by_ton(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee, int my_ton_balance) impure inline {
     var (status, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t) = load_data();
 
     throw_unless(931, status == status::FILLED);
     throw_unless(932, side == side::SELLER);
-    ;; TODO improve ton validation
-    throw_unless(933, msg_value > quantity * price + 2 * fwd_fee);
     throw_unless(934, slice_bits(in_msg_body) == 64); ;; query_id
 
     int query_id = in_msg_body~load_uint(64);
 
+    int ton_balance_before_msg = my_ton_balance - msg_value;
+    int storage_fee = fee::tons_for_storage() - min(ton_balance_before_msg, fee::tons_for_storage());
+    msg_value -= (storage_fee + fee::ton_order::close_consumption());
+
+    throw_unless(933, msg_value > quantity * price + 4 * fwd_fee + 2 * (fee::jetton::consumption() +  fee::tons_for_storage()));
+
     cell jetton_wallet_state_init = calculate_jetton_wallet_state_init(my_address(), jetton_master_address, jetton_wallet_code);
     slice order_jetton_wallet_address = calculate_jetton_wallet_address(jetton_wallet_state_init);
 
-    ;; TODO: need to calculate excesses correctly
-    int value = msg_value / 2;
+    ;; reserve tons for storage and current computations
 
-    send_tokens(query_id, quantity, sender_address, order_jetton_wallet_address, sender_address, value, fwd_fee);
-    send_ton(query_id, creator_address, quantity * price);
+    int jetton_fwd_cost = 3 * fwd_fee + 2 * (fee::jetton::consumption() +  2 * fee::tons_for_storage());
+    ~dump(jetton_fwd_cost);
+    send_tokens(query_id, quantity, sender_address, order_jetton_wallet_address, sender_address, jetton_fwd_cost, fwd_fee + fee::jetton::consumption() +  2 * fee::tons_for_storage());
+
+    ~dump(msg_value);
+    msg_value -= jetton_fwd_cost;
+    ~dump(msg_value);
+    send_ton(query_id, creator_address, msg_value);
 
     save_data(status::CLOSED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
 }
@@ -185,7 +199,7 @@
     }
 
     if (op == op::close_ton_order()) {
-        close_order_by_ton(in_msg_body, sender_address, msg_value, fwd_fee);
+        close_order_by_ton(in_msg_body, sender_address, msg_value, fwd_fee, my_balance);
         return ();
     }
 
@@ -199,7 +213,7 @@
         }
 
         if (status == status::FILLED) {
-            close_order(in_msg_body, sender_address, msg_value, fwd_fee);
+            close_order(in_msg_body, sender_address, msg_value, fwd_fee, my_balance);
             return ();
         }
 
