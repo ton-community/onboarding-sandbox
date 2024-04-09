@@ -5,6 +5,7 @@ import { compile } from '@ton/blueprint';
 import { JettonWallet } from "../wrappers/JettonWallet";
 import { JettonMinter } from "../wrappers/JettonMinter";
 import { TonOrder } from "../wrappers/TonOrder";
+import exp from 'node:constants';
 
 
 describe('TonOrder', () => {
@@ -120,7 +121,6 @@ describe('TonOrder', () => {
       queryId: 9,
     });
 
-    // TODO: validate TON amount
     const orderData = await order.getOrderData();
     expect(orderData.status).toEqual(3);
 

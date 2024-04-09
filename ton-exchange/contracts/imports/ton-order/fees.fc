@@ -1,0 +1,3 @@
+int fee::ton_order::create_consumption() asm "20000000 PUSHINT"; ;; 0.02 TON
+int fee::ton_order::fill_consumption() asm "10000000 PUSHINT"; ;; 0.010 TON
+int fee::ton_order::close_consumption() asm "13000000 PUSHINT"; ;; 0.013 TON
