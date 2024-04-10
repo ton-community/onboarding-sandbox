@@ -41,6 +41,10 @@ export class Order implements Contract {
   constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {
   }
 
+  static createFromAddress(address: Address) {
+    return new Order(address);
+  }
+
   static createFromConfig(config: OrderConfig, code: Cell, workchain = 0) {
     const data = orderConfigToCell(config);
     const init = { code, data };

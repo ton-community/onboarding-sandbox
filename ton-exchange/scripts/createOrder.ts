@@ -4,19 +4,19 @@ import { JettonWallet } from '../wrappers/JettonWallet';
 import { JettonMaster } from "@ton/ton";
 
 export async function run(provider: NetworkProvider) {
-  const orderDeployerAddress = Address.parse('EQATby-1OvzljIFtUY0sToBL9NJf5vOf9eAAY0PiL6E-CDiI');
+  const orderDeployerAddress = Address.parse('kQAIWBLY2aJUAA7cFhVk1HBhCUeasv5JQwcarMcF8EXdsBSh');
 
   const baseMasterAddress = Address.parse('kQBWwN8SW6Rc_wHl3hnXYLTCWKPk3-VWtuhib3KMg0Wsqdbl');
   const quoteMasterAddress = Address.parse('kQCXIMgabnmqaEUspkO0XlSPS4t394YFBlIg0Upygyw3fuSL');
 
-  // kQCvzhBVhVCbZVjXffimgqOGdNTMgTx4I9oCdTfAa76fb3hc -- GLEB'S LUPA
-  // kQA8Q7m_pSNPr6FcqRYxllpAZv-0ieXy_KYER2iP195hBXiU -- GLEB'S VUP
-  const jettonWalletAddress = Address.parse('kQA8Q7m_pSNPr6FcqRYxllpAZv-0ieXy_KYER2iP195hBXiU');
+  // kQBdLnykFt2Vbi7v5Gz7smM_quidjaqLzyD19b1QwUw54JPT -- GLEB'S Buy
+  // kQDkPYFZC9w6h-_wZCZ959XBCv6IdLEFWMMqHTLcHFRc4_YH -- GLEB'S Sell
+  const jettonWalletAddress = Address.parse('kQDkPYFZC9w6h-_wZCZ959XBCv6IdLEFWMMqHTLcHFRc4_YH');
   const jettonWallet = provider.open(JettonWallet.createFromAddress(jettonWalletAddress));
 
   const price = 5;
   const side = 0;
-  const queryId = 10;
+  const queryId = 9;
 
   await jettonWallet.sendTransfer(provider.sender(), {
     value: toNano(1),

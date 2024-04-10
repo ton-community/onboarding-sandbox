@@ -55,8 +55,8 @@
     slice from_address = in_msg_body~load_msg_addr();
 
 
-    int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
     int forward_payload_value = fwd_fee + fee::jetton::consumption();
+    int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage()) + forward_payload_value;
     throw_unless_excesses(827, equal_slices(deployer_address, from_address), query_id, jetton_amount, from_address, sender_address,
                                 from_address, transfer_fee, forward_payload_value);
 
@@ -83,9 +83,9 @@
     int jetton_amount = in_msg_body~load_coins();
     slice from_address = in_msg_body~load_msg_addr();
 
-    ;; transfer + internal_transfer + notification
-    int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
     int forward_payload_value = fwd_fee + fee::jetton::consumption();
+    ;; transfer + internal_transfer + notification
+    int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage()) + forward_payload_value;
 
     slice either_forward_payload = in_msg_body;
     throw_unless_excesses(822, slice_bits(either_forward_payload) == 1 + 32, query_id, jetton_amount, from_address, sender_address,
@@ -111,7 +111,7 @@
     user_quantity -= total_quantity;
 
     ;; exchange + current consumption
-    int total_consumption = (user_quantity > 0) ? 3 : 2 * (transfer_fee + forward_payload_value) + fee::order::close_consumption();
+    int total_consumption = (user_quantity > 0) ? 3 : 2 * (transfer_fee) + fee::order::close_consumption();
     throw_unless_excesses(950, msg_value > total_consumption, query_id, jetton_amount, from_address, sender_address,
                                 from_address, transfer_fee, forward_payload_value);
 

@@ -112,8 +112,8 @@
     int jetton_amount = in_msg_body~load_coins();
     slice from_address = in_msg_body~load_msg_addr(); ;; jetton's owner address - order creator
 
-    int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
     int forward_payload_value = fwd_fee + fee::jetton::consumption();
+    int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage()) + forward_payload_value;
 
     slice either_forward_payload = in_msg_body;
     int is_payload_invalid = check_if_fill_order_payload_invalid(either_forward_payload);
@@ -132,10 +132,10 @@
 
     ;; instead of order create jetton wallet address we use order deployer
     ;; jetton wallet address because it will be the same currency
-    throw_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? base_jetton_address : quote_jetton_address, jetton_wallet_code);
-    ;; int fraud = check_if_jetton_wallet_fraud_detected();
-    ;; throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address, 
-    ;;                             from_address, transfer_fee, forward_payload_value);
+    ;; throw_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? base_jetton_address : quote_jetton_address, jetton_wallet_code);
+    int fraud = check_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? base_jetton_address : quote_jetton_address, jetton_wallet_code);
+    throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address, 
+                                from_address, transfer_fee, forward_payload_value);
 
     throw_unless_excesses(715, side == side::SELLER & (jetton_amount ^% price == 0), 
                                 query_id, jetton_amount, from_address, sender_address, 
@@ -222,8 +222,8 @@
     int expiration_time_t = payload~load_uint(64);
 
     ;; transfer + internal_transfer + notification
-    int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
     int forward_payload_value = fwd_fee + fee::jetton::consumption();
+    int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage()) + forward_payload_value;
 
     int fraud = check_if_jetton_wallet_fraud_detected(sender_address, jetton_master_address, jetton_wallet_code);
     throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address, 
