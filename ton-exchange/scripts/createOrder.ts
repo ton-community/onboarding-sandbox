@@ -9,14 +9,14 @@ export async function run(provider: NetworkProvider) {
   const baseMasterAddress = Address.parse('kQBWwN8SW6Rc_wHl3hnXYLTCWKPk3-VWtuhib3KMg0Wsqdbl');
   const quoteMasterAddress = Address.parse('kQCXIMgabnmqaEUspkO0XlSPS4t394YFBlIg0Upygyw3fuSL');
 
-  // kQBdLnykFt2Vbi7v5Gz7smM_quidjaqLzyD19b1QwUw54JPT -- GLEB'S LUPA
-  // kQDkPYFZC9w6h-_wZCZ959XBCv6IdLEFWMMqHTLcHFRc4_YH -- GLEB'S VUP
+  // kQBdLnykFt2Vbi7v5Gz7smM_quidjaqLzyD19b1QwUw54JPT -- GLEB'S Buy
+  // kQDkPYFZC9w6h-_wZCZ959XBCv6IdLEFWMMqHTLcHFRc4_YH -- GLEB'S Sell
   const jettonWalletAddress = Address.parse('kQDkPYFZC9w6h-_wZCZ959XBCv6IdLEFWMMqHTLcHFRc4_YH');
   const jettonWallet = provider.open(JettonWallet.createFromAddress(jettonWalletAddress));
 
   const price = 5;
   const side = 0;
-  const queryId = 10;
+  const queryId = 9;
 
   await jettonWallet.sendTransfer(provider.sender(), {
     value: toNano(1),
