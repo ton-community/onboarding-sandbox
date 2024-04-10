@@ -132,10 +132,10 @@
 
     ;; instead of order create jetton wallet address we use order deployer
     ;; jetton wallet address because it will be the same currency
-    throw_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? base_jetton_address : quote_jetton_address, jetton_wallet_code);
-    ;; int fraud = check_if_jetton_wallet_fraud_detected();
-    ;; throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address, 
-    ;;                             from_address, transfer_fee, forward_payload_value);
+    ;; throw_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? base_jetton_address : quote_jetton_address, jetton_wallet_code);
+    int fraud = check_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? base_jetton_address : quote_jetton_address, jetton_wallet_code);
+    throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address, 
+                                from_address, transfer_fee, forward_payload_value);
 
     throw_unless_excesses(715, side == side::SELLER & (jetton_amount ^% price == 0), 
                                 query_id, jetton_amount, from_address, sender_address, 
