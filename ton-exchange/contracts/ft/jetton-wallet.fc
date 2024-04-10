@@ -1,13 +1,8 @@
 ;; Jetton Wallet Smart Contract
-
-#include "imports/stdlib.fc";
-#include "imports/params.fc";
-#include "imports/constants.fc";
-#include "imports/jetton-utils.fc";
-#include "imports/opcodes.fc";
-#include "imports/utils.fc";
-#pragma version >=0.2.0;
-
+#include "stdlib.fc";
+#include "op-codes.fc";
+#include "jetton-utils.fc";
+#include "params.fc";
 {-
 
 NOTE that this tokens can be transferred within the same workchain.
@@ -20,8 +15,14 @@ This is suitable for most tokens, if you need tokens transferable between workch
 
 -}
 
-const min_tons_for_storage = 10000000; ;; 0.01 TON
-const gas_consumption = 10000000; ;; 0.01 TON
+int min_tons_for_storage() asm "10000000 PUSHINT"; ;; 0.01 TON
+;; Note that 2 * gas_consumptions is expected to be able to cover fees on both wallets (sender and receiver)
+;; and also constant fees on inter-wallet interaction, in particular fwd fee on state_init transfer
+;; that means that you need to reconsider this fee when:
+;; a) jetton logic become more gas-heavy
+;; b) jetton-wallet code (sent with inter-wallet message) become larger or smaller
+;; c) global fee changes / different workchain
+int gas_consumption() asm "15000000 PUSHINT"; ;; 0.015 TON
 
 {-
   Storage
@@ -33,7 +34,7 @@ const gas_consumption = 10000000; ;; 0.01 TON
     return (ds~load_coins(), ds~load_msg_addr(), ds~load_msg_addr(), ds~load_ref());
 }
 
-() save_data(int balance, slice owner_address, slice jetton_master_address, cell jetton_wallet_code) impure inline {
+() save_data (int balance, slice owner_address, slice jetton_master_address, cell jetton_wallet_code) impure inline {
     set_data(pack_jetton_wallet_data(balance, owner_address, jetton_master_address, jetton_wallet_code));
 }
 
@@ -49,7 +50,7 @@ const gas_consumption = 10000000; ;; 0.01 TON
                      = InternalMsgBody;
 -}
 
-() send_tokens(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure {
+() send_tokens (slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure {
     int query_id = in_msg_body~load_uint(64);
     int jetton_amount = in_msg_body~load_coins();
     slice to_owner_address = in_msg_body~load_msg_addr();
@@ -90,7 +91,7 @@ const gas_consumption = 10000000; ;; 0.01 TON
     ;; 3 messages: wal1->wal2,  wal2->owner, wal2->response
     ;; but last one is optional (it is ok if it fails)
     fwd_count * fwd_fee +
-    (2 * gas_consumption + min_tons_for_storage));
+    (2 * gas_consumption() + min_tons_for_storage()));
     ;; universal message send fee calculation may be activated here
     ;; by using this instead of fwd_fee
     ;; msg_fwd_fee(to_wallet, msg_body, state_init, 15)
@@ -107,7 +108,7 @@ const gas_consumption = 10000000; ;; 0.01 TON
                      = InternalMsgBody;
 -}
 
-() receive_tokens(slice in_msg_body, slice sender_address, int my_ton_balance, int fwd_fee, int msg_value) impure {
+() receive_tokens (slice in_msg_body, slice sender_address, int my_ton_balance, int fwd_fee, int msg_value) impure {
     ;; NOTE we can not allow fails in action phase since in that case there will be
     ;; no bounce. Thus check and throw in computation phase.
     (int balance, slice owner_address, slice jetton_master_address, cell jetton_wallet_code) = load_data();
@@ -124,9 +125,9 @@ const gas_consumption = 10000000; ;; 0.01 TON
     int forward_ton_amount = in_msg_body~load_coins();
 
     int ton_balance_before_msg = my_ton_balance - msg_value;
-    int storage_fee = min_tons_for_storage - min(ton_balance_before_msg, min_tons_for_storage);
-    msg_value -= (storage_fee + gas_consumption);
-    if (forward_ton_amount) {
+    int storage_fee = min_tons_for_storage() - min(ton_balance_before_msg, min_tons_for_storage());
+    msg_value -= (storage_fee + gas_consumption());
+    if(forward_ton_amount) {
         msg_value -= (forward_ton_amount + fwd_fee);
         slice either_forward_payload = in_msg_body;
 
@@ -162,7 +163,7 @@ const gas_consumption = 10000000; ;; 0.01 TON
     save_data(balance, owner_address, jetton_master_address, jetton_wallet_code);
 }
 
-() burn_tokens(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure {
+() burn_tokens (slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure {
     ;; NOTE we can not allow fails in action phase since in that case there will be
     ;; no bounce. Thus check and throw in computation phase.
     (int balance, slice owner_address, slice jetton_master_address, cell jetton_wallet_code) = load_data();
@@ -174,7 +175,7 @@ const gas_consumption = 10000000; ;; 0.01 TON
     balance -= jetton_amount;
     throw_unless(705, equal_slices(owner_address, sender_address));
     throw_unless(706, balance >= 0);
-    throw_unless(707, msg_value > fwd_fee + 2 * gas_consumption);
+    throw_unless(707, msg_value > fwd_fee + 2 * gas_consumption());
 
     var msg_body = begin_cell()
         .store_uint(op::burn_notification(), 32)
@@ -196,7 +197,7 @@ const gas_consumption = 10000000; ;; 0.01 TON
     save_data(balance, owner_address, jetton_master_address, jetton_wallet_code);
 }
 
-() on_bounce(slice in_msg_body) impure {
+() on_bounce (slice in_msg_body) impure {
     in_msg_body~skip_bits(32); ;; 0xFFFFFFFF
     (int balance, slice owner_address, slice jetton_master_address, cell jetton_wallet_code) = load_data();
     int op = in_msg_body~load_uint(32);
@@ -208,8 +209,7 @@ const gas_consumption = 10000000; ;; 0.01 TON
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
-    if (in_msg_body.slice_empty?()) {
-        ;; ignore empty messages
+    if (in_msg_body.slice_empty?()) { ;; ignore empty messages
         return ();
     }
 
@@ -228,20 +228,17 @@ const gas_consumption = 10000000; ;; 0.01 TON
 
     int op = in_msg_body~load_uint(32);
 
-    if (op == op::transfer()) {
-        ;; outgoing transfer
+    if (op == op::transfer()) { ;; outgoing transfer
         send_tokens(in_msg_body, sender_address, msg_value, fwd_fee);
         return ();
     }
 
-    if (op == op::internal_transfer()) {
-        ;; incoming transfer
+    if (op == op::internal_transfer()) { ;; incoming transfer
         receive_tokens(in_msg_body, sender_address, my_balance, fwd_fee, msg_value);
         return ();
     }
 
-    if (op == op::burn()) {
-        ;; burn
+    if (op == op::burn()) { ;; burn
         burn_tokens(in_msg_body, sender_address, msg_value, fwd_fee);
         return ();
     }

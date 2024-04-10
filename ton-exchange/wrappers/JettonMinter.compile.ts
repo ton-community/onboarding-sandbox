@@ -2,5 +2,5 @@ import { CompilerConfig } from '@ton/blueprint';
 
 export const compile: CompilerConfig = {
   lang: 'func',
-  targets: ['contracts/jetton-minter.fc'],
+  targets: ['contracts/ft/jetton-minter.fc'],
 };

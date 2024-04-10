@@ -1,9 +1,10 @@
 import { Address, beginCell, toNano } from '@ton/core';
 import { NetworkProvider } from '@ton/blueprint';
 import { JettonWallet } from '../wrappers/JettonWallet';
+import { JettonMaster } from "@ton/ton";
 
 export async function run(provider: NetworkProvider) {
-  const orderDeployerAddress = Address.parse('kQBeZHv7yg2PlBU-r00hn7fvGyevlr24id9lirSlfTXf5Ojb');
+  const orderDeployerAddress = Address.parse('EQATby-1OvzljIFtUY0sToBL9NJf5vOf9eAAY0PiL6E-CDiI');
 
   const baseMasterAddress = Address.parse('kQBWwN8SW6Rc_wHl3hnXYLTCWKPk3-VWtuhib3KMg0Wsqdbl');
   const quoteMasterAddress = Address.parse('kQCXIMgabnmqaEUspkO0XlSPS4t394YFBlIg0Upygyw3fuSL');

@@ -2,15 +2,12 @@
 ;; instead of this contract, see https://github.com/ton-blockchain/TEPs/blob/master/text/0089-jetton-wallet-discovery.md
 
 ;; Jettons minter smart contract
-
+#include "stdlib.fc";
+#include "op-codes.fc";
+#include "jetton-utils.fc";
+#include "params.fc";
 ;; storage scheme
 ;; storage#_ total_supply:Coins admin_address:MsgAddress content:^Cell jetton_wallet_code:^Cell = Storage;
-
-#include "imports/stdlib.fc";
-#include "imports/opcodes.fc";
-#include "imports/params.fc";
-#include "imports/jetton-utils.fc";
-
 
 (int, slice, cell, cell) load_data() inline {
     slice ds = get_data().begin_parse();
@@ -109,7 +106,7 @@
         return ();
     }
 
-    throw(0xffffff);
+    throw(0xffff);
 }
 
 (int, int, slice, cell, cell) get_jetton_data() method_id {

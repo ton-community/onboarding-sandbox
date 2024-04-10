@@ -1,3 +1,5 @@
+#include "utils.fc";
+
 builder store::ext_out_msg_info::ref(builder b)
 asm "b{11} x{0000000000000000000000000} |+ b{01} |+ STSLICECONST";
 
