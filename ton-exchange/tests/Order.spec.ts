@@ -118,21 +118,22 @@ describe('Order', () => {
     const price = 5;
 
     // emulating that it was sent from deployer
-    await deployerFirstJettonWaller.sendTransfer(deployer.getSender(), {
+    const res = await deployerFirstJettonWaller.sendTransfer(deployer.getSender(), {
       jettonAmount: jettonToSell,
       queryId: 9,
       toAddress: order.address,
       value: toNano(1),
-      fwdAmount: toNano(0.1),
+      fwdAmount: toNano(0.2),
       forwardPayload: beginCell()
+        .storeUint(0x26DE15E1, 32)
         .storeRef(beginCell()
           .storeAddress(firstJettonMinter.address) // base_jetton_address
           .storeAddress(secondJettonMinter.address) // quote_jetton_address
+          .storeUint(side, 1)
+          .storeUint(price, 32)
+          .storeUint(expirationTime, 64)
           .endCell(),
         )
-        .storeUint(side, 1)
-        .storeUint(price, 32)
-        .storeUint(expirationTime, 64)
         .endCell()
         .asSlice(),
     });
@@ -154,7 +155,7 @@ describe('Order', () => {
     const price = 5;
 
     let jettonToBuy = 300n;
-    
+
     const res = await buyerSecondJettonWallet.sendTransfer(buyer.getSender(), {
       jettonAmount: jettonToBuy,
       queryId: 9,
@@ -189,7 +190,7 @@ describe('Order', () => {
     const price = 5;
 
     let jettonToBuy = 200n;
-    
+
     const res = await buyerSecondJettonWallet.sendTransfer(buyer.getSender(), {
       jettonAmount: jettonToBuy,
       queryId: 9,

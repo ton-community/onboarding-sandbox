@@ -54,15 +54,13 @@
     int jetton_amount = in_msg_body~load_coins();
     slice from_address = in_msg_body~load_msg_addr();
 
-    slice either_forward_payload = in_msg_body;
 
     int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
     int forward_payload_value = fwd_fee + fee::jetton::consumption();
-    throw_unless_excesses(827, equal_slices(deployer_address, from_address), query_id, jetton_amount, from_address, sender_address, 
+    throw_unless_excesses(827, equal_slices(deployer_address, from_address), query_id, jetton_amount, from_address, sender_address,
                                 from_address, transfer_fee, forward_payload_value);
 
-    slice cpy_payload = either_forward_payload;
-    slice payload = cpy_payload~load_ref().begin_parse(); ;; copy for extracting
+    slice payload = in_msg_body~load_ref().begin_parse();
     base_jetton_address = payload~load_msg_addr();
     quote_jetton_address = payload~load_msg_addr();
     side = payload~load_uint(1);
@@ -70,7 +68,7 @@
     expiration_time_t = payload~load_uint(64);
 
     int is_correct_side = (side == side::SELLER) | (side == side::BUYER);
-    throw_unless_excesses(819, is_correct_side, query_id, jetton_amount, from_address, sender_address, 
+    throw_unless_excesses(819, is_correct_side, query_id, jetton_amount, from_address, sender_address,
                                 from_address, transfer_fee, forward_payload_value);
 
     wallet_address = sender_address;
@@ -88,22 +86,22 @@
     ;; transfer + internal_transfer + notification
     int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
     int forward_payload_value = fwd_fee + fee::jetton::consumption();
-    
+
     slice either_forward_payload = in_msg_body;
-    throw_unless_excesses(822, slice_bits(either_forward_payload) == 1 + 32, query_id, jetton_amount, from_address, sender_address, 
+    throw_unless_excesses(822, slice_bits(either_forward_payload) == 1 + 32, query_id, jetton_amount, from_address, sender_address,
                                 from_address, transfer_fee, forward_payload_value); ;; side, price
 
     int user_side = either_forward_payload~load_uint(1);
     int user_price = either_forward_payload~load_uint(32);
 
     int fraud = check_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? quote_wallet_address : base_wallet_address, jetton_wallet_code);
-    throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address, 
+    throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address,
                                 from_address, transfer_fee, forward_payload_value);
 
     int is_correct_side = (side == side::SELLER ? user_side == side::BUYER : user_side == side::SELLER);
-    throw_unless_excesses(824, is_correct_side , query_id, jetton_amount, from_address, sender_address, 
+    throw_unless_excesses(824, is_correct_side , query_id, jetton_amount, from_address, sender_address,
                                 from_address, transfer_fee, forward_payload_value);
-    throw_unless_excesses(825, price == user_price, query_id, jetton_amount, from_address, sender_address, 
+    throw_unless_excesses(825, price == user_price, query_id, jetton_amount, from_address, sender_address,
                                 from_address, transfer_fee, forward_payload_value);
 
     int user_quantity = calculate_quantity(user_side, jetton_amount, user_price);
@@ -114,7 +112,7 @@
 
     ;; exchange + current consumption
     int total_consumption = (user_quantity > 0) ? 3 : 2 * (transfer_fee + forward_payload_value) + fee::order::close_consumption();
-    throw_unless_excesses(950, msg_value > total_consumption, query_id, jetton_amount, from_address, sender_address, 
+    throw_unless_excesses(950, msg_value > total_consumption, query_id, jetton_amount, from_address, sender_address,
                                 from_address, transfer_fee, forward_payload_value);
 
     if (side == side::SELLER) {
@@ -152,7 +150,7 @@
     if (quantity < 0)
     {
         ;; smth goes wrong
-        throw_unless_excesses(1000, 0, query_id, jetton_amount, from_address, sender_address, 
+        throw_unless_excesses(1000, 0, query_id, jetton_amount, from_address, sender_address,
                                 from_address, transfer_fee, forward_payload_value);
     }
 

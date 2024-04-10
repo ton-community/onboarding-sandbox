@@ -4,13 +4,13 @@ import { JettonWallet } from '../wrappers/JettonWallet';
 
 export async function run(provider: NetworkProvider) {
   const orderDeployerAddress = Address.parse('kQBeZHv7yg2PlBU-r00hn7fvGyevlr24id9lirSlfTXf5Ojb');
-  
+
   const baseMasterAddress = Address.parse('kQBWwN8SW6Rc_wHl3hnXYLTCWKPk3-VWtuhib3KMg0Wsqdbl');
   const quoteMasterAddress = Address.parse('kQCXIMgabnmqaEUspkO0XlSPS4t394YFBlIg0Upygyw3fuSL');
 
-  // kQBdLnykFt2Vbi7v5Gz7smM_quidjaqLzyD19b1QwUw54JPT -- GLEB'S LUPA
-  // kQDkPYFZC9w6h-_wZCZ959XBCv6IdLEFWMMqHTLcHFRc4_YH -- GLEB'S VUP
-  const jettonWalletAddress = Address.parse('kQDkPYFZC9w6h-_wZCZ959XBCv6IdLEFWMMqHTLcHFRc4_YH');
+  // kQCvzhBVhVCbZVjXffimgqOGdNTMgTx4I9oCdTfAa76fb3hc -- GLEB'S LUPA
+  // kQA8Q7m_pSNPr6FcqRYxllpAZv-0ieXy_KYER2iP195hBXiU -- GLEB'S VUP
+  const jettonWalletAddress = Address.parse('kQA8Q7m_pSNPr6FcqRYxllpAZv-0ieXy_KYER2iP195hBXiU');
   const jettonWallet = provider.open(JettonWallet.createFromAddress(jettonWalletAddress));
 
   const price = 5;
@@ -21,7 +21,7 @@ export async function run(provider: NetworkProvider) {
     value: toNano(1),
     fwdAmount: toNano(0.7),
     queryId,
-    jettonAmount: toNano(100n),
+    jettonAmount: toNano(1),
     toAddress: orderDeployerAddress,
     forwardPayload: beginCell()
       .storeUint(0x26DE15E1, 32)
