@@ -61,12 +61,13 @@
     throw_unless_excesses(827, equal_slices(deployer_address, from_address), query_id, jetton_amount, from_address, sender_address, 
                                 from_address, transfer_fee, forward_payload_value);
 
-    slice base_jetton_slice = either_forward_payload~load_ref().begin_parse();
-    base_jetton_address = base_jetton_slice~load_msg_addr();
-    quote_jetton_address = base_jetton_slice~load_msg_addr();
-    side = either_forward_payload~load_uint(1);
-    price = either_forward_payload~load_uint(32);
-    expiration_time_t = either_forward_payload~load_uint(64);
+    slice cpy_payload = either_forward_payload;
+    slice payload = cpy_payload~load_ref().begin_parse(); ;; copy for extracting
+    base_jetton_address = payload~load_msg_addr();
+    quote_jetton_address = payload~load_msg_addr();
+    side = payload~load_uint(1);
+    price = payload~load_uint(32);
+    expiration_time_t = payload~load_uint(64);
 
     int is_correct_side = (side == side::SELLER) | (side == side::BUYER);
     throw_unless_excesses(819, is_correct_side, query_id, jetton_amount, from_address, sender_address, 

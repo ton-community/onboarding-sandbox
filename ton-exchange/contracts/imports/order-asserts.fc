@@ -2,9 +2,9 @@
 #include "jetton-utils.fc";
 #include "out-log.fc";
 
-() throw_if_fill_order_payload_invalid(int excno, slice either_forward_payload) impure inline {
+(int) check_if_fill_order_payload_invalid(slice either_forward_payload) impure inline {
     var (_, bits, _) = either_forward_payload.slice_compute_data_size(2);
-    throw_unless(excno, bits == 267 + 267 + 1 + 32 + 64); ;; base, quote, side, price, expiration_time_t
+    return bits != 32 + 267 + 267 + 1 + 32 + 64; ;; order_creation_type, base, quote, side, price, expiration_time_t
 }
 
 
