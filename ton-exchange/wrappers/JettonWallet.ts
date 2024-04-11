@@ -9,7 +9,7 @@ import {
   SendMode,
   Slice,
 } from '@ton/core';
-import { Maybe } from "@ton/ton/dist/utils/maybe";
+import {Maybe} from '@ton/ton/dist/utils/maybe';
 
 export type JettonWalletConfig = {
   ownerAddress: Address;
@@ -27,16 +27,22 @@ export function jettonWalletConfigToCell(config: JettonWalletConfig): Cell {
 }
 
 export class JettonWallet implements Contract {
-  constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {
-  }
+  constructor(
+    readonly address: Address,
+    readonly init?: {code: Cell; data: Cell}
+  ) {}
 
   static createFromAddress(address: Address) {
     return new JettonWallet(address);
   }
 
-  static createFromConfig(config: JettonWalletConfig, code: Cell, workchain = 0) {
+  static createFromConfig(
+    config: JettonWalletConfig,
+    code: Cell,
+    workchain = 0
+  ) {
     const data = jettonWalletConfigToCell(config);
-    const init = { code, data };
+    const init = {code, data};
     return new JettonWallet(contractAddress(workchain, init), init);
   }
 
@@ -48,15 +54,17 @@ export class JettonWallet implements Contract {
     });
   }
 
-  async sendTransfer(provider: ContractProvider, via: Sender,
-                     opts: {
-                       value: bigint;
-                       toAddress: Address;
-                       queryId: number;
-                       fwdAmount: bigint;
-                       jettonAmount: bigint;
-                       forwardPayload?: Maybe<Slice>
-                     },
+  async sendTransfer(
+    provider: ContractProvider,
+    via: Sender,
+    opts: {
+      value: bigint;
+      toAddress: Address;
+      queryId: number;
+      fwdAmount: bigint;
+      jettonAmount: bigint;
+      forwardPayload?: Maybe<Slice>;
+    }
   ) {
     const builder = beginCell()
       .storeUint(0xf8a7ea5, 32)
@@ -66,7 +74,6 @@ export class JettonWallet implements Contract {
       .storeAddress(via.address)
       .storeUint(0, 1)
       .storeCoins(opts.fwdAmount);
-
 
     if (opts.forwardPayload) {
       builder.storeSlice(opts.forwardPayload);
@@ -81,12 +88,14 @@ export class JettonWallet implements Contract {
     });
   }
 
-  async sendBurn(provider: ContractProvider, via: Sender,
-                 opts: {
-                   value: bigint;
-                   queryId: number
-                   jettonAmount: bigint;
-                 },
+  async sendBurn(
+    provider: ContractProvider,
+    via: Sender,
+    opts: {
+      value: bigint;
+      queryId: number;
+      jettonAmount: bigint;
+    }
   ) {
     await provider.internal(via, {
       value: opts.value,
@@ -102,7 +111,7 @@ export class JettonWallet implements Contract {
   }
 
   async getWalletJettonAmount(provider: ContractProvider): Promise<bigint> {
-    const { stack } = await provider.get('get_wallet_data', []);
+    const {stack} = await provider.get('get_wallet_data', []);
     return stack.readBigNumber();
   }
 }

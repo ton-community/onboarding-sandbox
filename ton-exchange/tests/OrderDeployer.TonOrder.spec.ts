@@ -1,12 +1,11 @@
-import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
-import { beginCell, Cell, toNano } from '@ton/core';
+import {Blockchain, SandboxContract, TreasuryContract} from '@ton/sandbox';
+import {beginCell, Cell, toNano} from '@ton/core';
 import '@ton/test-utils';
-import { compile } from '@ton/blueprint';
-import { JettonWallet } from '../wrappers/JettonWallet';
-import { JettonMinter } from '../wrappers/JettonMinter';
-import { TonOrder } from '../wrappers/TonOrder';
-import { OrderDeployer } from '../wrappers/OrderDeployer';
-
+import {compile} from '@ton/blueprint';
+import {JettonWallet} from '../wrappers/JettonWallet';
+import {JettonMinter} from '../wrappers/JettonMinter';
+import {TonOrder} from '../wrappers/TonOrder';
+import {OrderDeployer} from '../wrappers/OrderDeployer';
 
 describe('OrderDeployer.TonOrder', () => {
   let orderDeployerCode;
@@ -27,16 +26,20 @@ describe('OrderDeployer.TonOrder', () => {
   let buyer: SandboxContract<TreasuryContract>;
 
   let orderDeployerJettonWallet: SandboxContract<JettonWallet>;
-  let orderJettonWallet: SandboxContract<JettonWallet>;
   let sellerJettonWallet: SandboxContract<JettonWallet>;
-  let buyerJettonWallet: SandboxContract<JettonWallet>;
 
-  let jettonAmount = 10n;
+  const jettonAmount = 10n;
 
   beforeAll(async () => {
     blockchain = await Blockchain.create();
 
-    [orderDeployerCode, orderCode, tonOrderCode, jettonMinterCode, jettonWalletCode] = await Promise.all([
+    [
+      orderDeployerCode,
+      orderCode,
+      tonOrderCode,
+      jettonMinterCode,
+      jettonWalletCode,
+    ] = await Promise.all([
       compile('OrderDeployer'),
       compile('Order'),
       compile('TonOrder'),
@@ -47,18 +50,28 @@ describe('OrderDeployer.TonOrder', () => {
     seller = await blockchain.treasury('seller');
     buyer = await blockchain.treasury('buyer');
 
-    orderDeployer = blockchain.openContract(OrderDeployer.createFromConfig({
-      tonOrderCode,
-      orderCode,
-      jettonWalletCode,
-      admin: deployer.address,
-      orderId: 0,
-    }, orderDeployerCode));
-    jettonMinter = blockchain.openContract(JettonMinter.createFromConfig({
-      jettonWalletCode,
-      adminAddress: deployer.address,
-      content: beginCell().storeStringTail('minter').endCell(),
-    }, jettonMinterCode));
+    orderDeployer = blockchain.openContract(
+      OrderDeployer.createFromConfig(
+        {
+          tonOrderCode,
+          orderCode,
+          jettonWalletCode,
+          admin: deployer.address,
+          orderId: 0,
+        },
+        orderDeployerCode
+      )
+    );
+    jettonMinter = blockchain.openContract(
+      JettonMinter.createFromConfig(
+        {
+          jettonWalletCode,
+          adminAddress: deployer.address,
+          content: beginCell().storeStringTail('minter').endCell(),
+        },
+        jettonMinterCode
+      )
+    );
     await jettonMinter.sendDeploy(deployer.getSender(), toNano(0.25));
 
     await jettonMinter.sendMint(deployer.getSender(), {
@@ -69,12 +82,18 @@ describe('OrderDeployer.TonOrder', () => {
       value: toNano(2),
     });
 
-    sellerJettonWallet = blockchain.openContract(JettonWallet.createFromAddress(await jettonMinter.getWalletAddress(seller.address)));
-    buyerJettonWallet = blockchain.openContract(JettonWallet.createFromAddress(await jettonMinter.getWalletAddress(buyer.address)));
+    sellerJettonWallet = blockchain.openContract(
+      JettonWallet.createFromAddress(
+        await jettonMinter.getWalletAddress(seller.address)
+      )
+    );
   });
 
   it('should deploy', async () => {
-    const { transactions } = await orderDeployer.sendDeploy(deployer.getSender(), toNano(0.05));
+    const {transactions} = await orderDeployer.sendDeploy(
+      deployer.getSender(),
+      toNano(0.05)
+    );
     expect(transactions).toHaveTransaction({
       from: deployer.address,
       to: orderDeployer.address,
@@ -82,7 +101,11 @@ describe('OrderDeployer.TonOrder', () => {
       success: true,
     });
 
-    orderDeployerJettonWallet = blockchain.openContract(JettonWallet.createFromAddress(await jettonMinter.getWalletAddress(orderDeployer.address)));
+    orderDeployerJettonWallet = blockchain.openContract(
+      JettonWallet.createFromAddress(
+        await jettonMinter.getWalletAddress(orderDeployer.address)
+      )
+    );
   });
 
   it('should create order by jetton', async () => {
@@ -96,20 +119,27 @@ describe('OrderDeployer.TonOrder', () => {
       jettonAmount,
       toAddress: orderDeployer.address,
       forwardPayload: beginCell()
-        .storeUint(0x26DE15E2, 32)
-        .storeRef(beginCell()
-          .storeAddress(jettonMinter.address)
-          .storeUint(price, 32)
-          .storeUint(expirationTime, 64)
-          .endCell(),
+        .storeUint(0x26de15e2, 32)
+        .storeRef(
+          beginCell()
+            .storeAddress(jettonMinter.address)
+            .storeUint(price, 32)
+            .storeUint(expirationTime, 64)
+            .endCell()
         )
         .endCell()
         .asSlice(),
     });
 
-    const { address: newOrderAddress } = await orderDeployer.getOrderAddress(0, 1);
-    const orderJettonWalletAddress = await jettonMinter.getWalletAddress(newOrderAddress);
-    const orderJettonWallet = blockchain.openContract(JettonWallet.createFromAddress(orderJettonWalletAddress));
+    const {address: newOrderAddress} = await orderDeployer.getOrderAddress(
+      0,
+      1
+    );
+    const orderJettonWalletAddress =
+      await jettonMinter.getWalletAddress(newOrderAddress);
+    const orderJettonWallet = blockchain.openContract(
+      JettonWallet.createFromAddress(orderJettonWalletAddress)
+    );
 
     expect(result.transactions).toHaveTransaction({
       from: orderDeployer.address,
@@ -123,7 +153,9 @@ describe('OrderDeployer.TonOrder', () => {
       success: true,
     });
 
-    const order = blockchain.openContract(TonOrder.createFromAddress(newOrderAddress));
+    const order = blockchain.openContract(
+      TonOrder.createFromAddress(newOrderAddress)
+    );
     const orderData = await order.getOrderData();
 
     expect(orderData.status).toEqual(2);
@@ -146,7 +178,10 @@ describe('OrderDeployer.TonOrder', () => {
       jettonMasterAddress: jettonMinter.address,
     });
 
-    const { address: newOrderAddress } = await orderDeployer.getOrderAddress(1, 1);
+    const {address: newOrderAddress} = await orderDeployer.getOrderAddress(
+      1,
+      1
+    );
     expect(result.transactions).toHaveTransaction({
       from: orderDeployer.address,
       to: newOrderAddress,
@@ -154,7 +189,9 @@ describe('OrderDeployer.TonOrder', () => {
       success: true,
     });
 
-    order = blockchain.openContract(TonOrder.createFromAddress(newOrderAddress));
+    order = blockchain.openContract(
+      TonOrder.createFromAddress(newOrderAddress)
+    );
 
     const orderData = await order.getOrderData();
 

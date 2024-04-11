@@ -1,14 +1,20 @@
-import { Address, beginCell, toNano } from '@ton/core';
-import { NetworkProvider } from '@ton/blueprint';
-import { JettonWallet } from '../wrappers/JettonWallet';
+import {Address, beginCell, toNano} from '@ton/core';
+import {NetworkProvider} from '@ton/blueprint';
+import {JettonWallet} from '../wrappers/JettonWallet';
 
 export async function run(provider: NetworkProvider) {
-  const orderAddress = Address.parse('kQB4bC19cqS8pnamBeJ2AAEBavH4-viTbMf7GNiT1rd0QJ0p');
+  const orderAddress = Address.parse(
+    'kQB4bC19cqS8pnamBeJ2AAEBavH4-viTbMf7GNiT1rd0QJ0p'
+  );
 
   // kQBdLnykFt2Vbi7v5Gz7smM_quidjaqLzyD19b1QwUw54JPT -- Buy
   // kQDkPYFZC9w6h-_wZCZ959XBCv6IdLEFWMMqHTLcHFRc4_YH -- Sell
-  const jettonWalletAddress = Address.parse('kQBdLnykFt2Vbi7v5Gz7smM_quidjaqLzyD19b1QwUw54JPT');
-  const jettonWallet = provider.open(JettonWallet.createFromAddress(jettonWalletAddress));
+  const jettonWalletAddress = Address.parse(
+    'kQBdLnykFt2Vbi7v5Gz7smM_quidjaqLzyD19b1QwUw54JPT'
+  );
+  const jettonWallet = provider.open(
+    JettonWallet.createFromAddress(jettonWalletAddress)
+  );
 
   const price = 5;
   const side = 1;
@@ -21,9 +27,9 @@ export async function run(provider: NetworkProvider) {
     jettonAmount: toNano(300n),
     toAddress: orderAddress,
     forwardPayload: beginCell()
-          .storeUint(side, 1)
-          .storeUint(price, 32)
-    .endCell()
-    .asSlice(),
+      .storeUint(side, 1)
+      .storeUint(price, 32)
+      .endCell()
+      .asSlice(),
   });
 }

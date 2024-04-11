@@ -1,5 +1,14 @@
-import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode } from '@ton/core';
-import { Maybe } from "@ton/ton/dist/utils/maybe";
+import {
+  Address,
+  beginCell,
+  Cell,
+  Contract,
+  contractAddress,
+  ContractProvider,
+  Sender,
+  SendMode,
+} from '@ton/core';
+import {Maybe} from '@ton/ton/dist/utils/maybe';
 
 export type OrderConfig = {
   status: number;
@@ -20,10 +29,12 @@ export type OrderConfig = {
 function orderConfigToCell(config: OrderConfig): Cell {
   return beginCell()
     .storeUint(config.status, 3)
-    .storeRef(beginCell()
-      .storeAddress(config.baseJettonAddress)
-      .storeAddress(config.quoteJettonAddress)
-      .endCell())
+    .storeRef(
+      beginCell()
+        .storeAddress(config.baseJettonAddress)
+        .storeAddress(config.quoteJettonAddress)
+        .endCell()
+    )
     .storeUint(config.side, 1)
     .storeUint(config.quantity, 64)
     .storeUint(config.price, 32)
@@ -38,8 +49,10 @@ function orderConfigToCell(config: OrderConfig): Cell {
 }
 
 export class Order implements Contract {
-  constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {
-  }
+  constructor(
+    readonly address: Address,
+    readonly init?: {code: Cell; data: Cell}
+  ) {}
 
   static createFromAddress(address: Address) {
     return new Order(address);
@@ -47,22 +60,27 @@ export class Order implements Contract {
 
   static createFromConfig(config: OrderConfig, code: Cell, workchain = 0) {
     const data = orderConfigToCell(config);
-    const init = { code, data };
+    const init = {code, data};
     return new Order(contractAddress(workchain, init), init);
   }
 
-  async sendDeploy(provider: ContractProvider, via: Sender, value: bigint, {
-    queryId,
-    creatorAddress,
-  }: {
-    queryId: number,
-    creatorAddress: Address
-  }) {
+  async sendDeploy(
+    provider: ContractProvider,
+    via: Sender,
+    value: bigint,
+    {
+      queryId,
+      creatorAddress,
+    }: {
+      queryId: number;
+      creatorAddress: Address;
+    }
+  ) {
     await provider.internal(via, {
       value,
       sendMode: SendMode.PAY_GAS_SEPARATELY,
       body: beginCell()
-        .storeUint(0x25DE17E2, 32)
+        .storeUint(0x25de17e2, 32)
         .storeUint(queryId, 64)
         .storeAddress(creatorAddress)
         .endCell(),
@@ -70,7 +88,7 @@ export class Order implements Contract {
   }
 
   async getOrderData(provider: ContractProvider) {
-    const { stack } = await provider.get('get_order_data', []);
+    const {stack} = await provider.get('get_order_data', []);
 
     const status = stack.readNumber();
     const baseWalletAddress = stack.readAddressOpt();

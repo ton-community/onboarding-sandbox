@@ -1,12 +1,18 @@
-import { Address, toNano } from '@ton/core';
-import { NetworkProvider } from '@ton/blueprint';
-import { OrderDeployer } from '../wrappers/OrderDeployer';
+import {Address, toNano} from '@ton/core';
+import {NetworkProvider} from '@ton/blueprint';
+import {OrderDeployer} from '../wrappers/OrderDeployer';
 
 export async function run(provider: NetworkProvider) {
-  const orderDeployerAddress = Address.parse('EQBuObr2M7glm08w6cBGjIuuCbmvBFGwuVs6qb3AQpac9Xpf');
-  const jettonMasterAddress = Address.parse('kQBWwN8SW6Rc_wHl3hnXYLTCWKPk3-VWtuhib3KMg0Wsqdbl');
+  const orderDeployerAddress = Address.parse(
+    'EQBuObr2M7glm08w6cBGjIuuCbmvBFGwuVs6qb3AQpac9Xpf'
+  );
+  const jettonMasterAddress = Address.parse(
+    'kQBWwN8SW6Rc_wHl3hnXYLTCWKPk3-VWtuhib3KMg0Wsqdbl'
+  );
 
-  const orderDeployer = provider.open(OrderDeployer.createFromAddress(orderDeployerAddress));
+  const orderDeployer = provider.open(
+    OrderDeployer.createFromAddress(orderDeployerAddress)
+  );
 
   const price = 1;
   await orderDeployer.sendCreateTonOrder(provider.sender(), {

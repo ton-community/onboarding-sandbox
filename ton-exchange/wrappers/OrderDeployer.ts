@@ -29,16 +29,22 @@ export function orderDeployerConfigToCell(config: OrderDeployerConfig): Cell {
 }
 
 export class OrderDeployer implements Contract {
-  constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {
-  }
+  constructor(
+    readonly address: Address,
+    readonly init?: {code: Cell; data: Cell}
+  ) {}
 
   static createFromAddress(address: Address) {
     return new OrderDeployer(address);
   }
 
-  static createFromConfig(config: OrderDeployerConfig, code: Cell, workchain = 0) {
+  static createFromConfig(
+    config: OrderDeployerConfig,
+    code: Cell,
+    workchain = 0
+  ) {
     const data = orderDeployerConfigToCell(config);
-    const init = { code, data };
+    const init = {code, data};
     return new OrderDeployer(contractAddress(workchain, init), init);
   }
 
@@ -50,19 +56,23 @@ export class OrderDeployer implements Contract {
     });
   }
 
-  async sendCreateTonOrder(provider: ContractProvider, via: Sender, opts: {
-    value: bigint,
-    queryId: number,
-    jettonMasterAddress: Address,
-    tonAmount: bigint,
-    price: number,
-    expirationTime: number,
-  }) {
+  async sendCreateTonOrder(
+    provider: ContractProvider,
+    via: Sender,
+    opts: {
+      value: bigint;
+      queryId: number;
+      jettonMasterAddress: Address;
+      tonAmount: bigint;
+      price: number;
+      expirationTime: number;
+    }
+  ) {
     await provider.internal(via, {
       value: opts.value,
       sendMode: SendMode.PAY_GAS_SEPARATELY,
       body: beginCell()
-        .storeUint(0x26DE17E2, 32)
+        .storeUint(0x26de17e2, 32)
         .storeUint(opts.queryId, 64)
         .storeAddress(opts.jettonMasterAddress)
         .storeCoins(opts.tonAmount)
@@ -72,7 +82,9 @@ export class OrderDeployer implements Contract {
     });
   }
 
-  async getOrderDeployerData(provider: ContractProvider): Promise<OrderDeployerConfig> {
+  async getOrderDeployerData(
+    provider: ContractProvider
+  ): Promise<OrderDeployerConfig> {
     const res = await provider.get('get_order_deployer_data', []);
     return {
       admin: res.stack.readAddress(),
@@ -83,7 +95,11 @@ export class OrderDeployer implements Contract {
     };
   }
 
-  async getOrderAddress(provider: ContractProvider, orderId: number, orderType: number): Promise<{ address: Address }> {
+  async getOrderAddress(
+    provider: ContractProvider,
+    orderId: number,
+    orderType: number
+  ): Promise<{address: Address}> {
     const builder = new TupleBuilder();
     builder.writeNumber(orderId);
     builder.writeNumber(orderType);

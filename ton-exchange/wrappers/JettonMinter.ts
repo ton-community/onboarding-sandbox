@@ -1,4 +1,14 @@
-import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode, TupleItemSlice } from '@ton/core';
+import {
+  Address,
+  beginCell,
+  Cell,
+  Contract,
+  contractAddress,
+  ContractProvider,
+  Sender,
+  SendMode,
+  TupleItemSlice,
+} from '@ton/core';
 
 export type JettonMinterConfig = {
   adminAddress: Address;
@@ -16,16 +26,22 @@ export function jettonMinterConfigToCell(config: JettonMinterConfig): Cell {
 }
 
 export class JettonMinter implements Contract {
-  constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {
-  }
+  constructor(
+    readonly address: Address,
+    readonly init?: {code: Cell; data: Cell}
+  ) {}
 
   static createFromAddress(address: Address) {
     return new JettonMinter(address);
   }
 
-  static createFromConfig(config: JettonMinterConfig, code: Cell, workchain = 0) {
+  static createFromConfig(
+    config: JettonMinterConfig,
+    code: Cell,
+    workchain = 0
+  ) {
     const data = jettonMinterConfigToCell(config);
-    const init = { code, data };
+    const init = {code, data};
     return new JettonMinter(contractAddress(workchain, init), init);
   }
 
@@ -37,14 +53,16 @@ export class JettonMinter implements Contract {
     });
   }
 
-  async sendMint(provider: ContractProvider, via: Sender,
-                 opts: {
-                   toAddress: Address;
-                   jettonAmount: bigint;
-                   amount: bigint;
-                   queryId: number;
-                   value: bigint;
-                 },
+  async sendMint(
+    provider: ContractProvider,
+    via: Sender,
+    opts: {
+      toAddress: Address;
+      jettonAmount: bigint;
+      amount: bigint;
+      queryId: number;
+      value: bigint;
+    }
   ) {
     await provider.internal(via, {
       value: opts.value,
@@ -63,13 +81,16 @@ export class JettonMinter implements Contract {
             .storeAddress(this.address)
             .storeCoins(0)
             .storeUint(0, 1)
-            .endCell(),
+            .endCell()
         )
         .endCell(),
     });
   }
 
-  async getWalletAddress(provider: ContractProvider, address: Address): Promise<Address> {
+  async getWalletAddress(
+    provider: ContractProvider,
+    address: Address
+  ): Promise<Address> {
     const result = await provider.get('get_wallet_address', [
       {
         type: 'slice',
@@ -84,5 +105,4 @@ export class JettonMinter implements Contract {
     const result = await provider.get('get_jetton_data', []);
     return result.stack.readBigNumber();
   }
-
 }

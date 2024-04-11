@@ -1,5 +1,14 @@
-import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode } from '@ton/core';
-import { Maybe } from "@ton/ton/dist/utils/maybe";
+import {
+  Address,
+  beginCell,
+  Cell,
+  Contract,
+  contractAddress,
+  ContractProvider,
+  Sender,
+  SendMode,
+} from '@ton/core';
+import {Maybe} from '@ton/ton/dist/utils/maybe';
 
 export type TonOrderConfig = {
   status: number;
@@ -32,8 +41,10 @@ function tonOrderConfigToCell(config: TonOrderConfig): Cell {
 }
 
 export class TonOrder implements Contract {
-  constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {
-  }
+  constructor(
+    readonly address: Address,
+    readonly init?: {code: Cell; data: Cell}
+  ) {}
 
   static createFromAddress(address: Address) {
     return new TonOrder(address);
@@ -41,24 +52,29 @@ export class TonOrder implements Contract {
 
   static createFromConfig(config: TonOrderConfig, code: Cell, workchain = 0) {
     const data = tonOrderConfigToCell(config);
-    const init = { code, data };
+    const init = {code, data};
     return new TonOrder(contractAddress(workchain, init), init);
   }
 
-  async sendDeploy(provider: ContractProvider, via: Sender, value: bigint, opts: {
-    side: number,
-    queryId: number,
-    quantity: number,
-    price: number,
-    jettonMasterAddress: Address,
-    creatorAddress: Address,
-    expirationTime: number,
-  }) {
+  async sendDeploy(
+    provider: ContractProvider,
+    via: Sender,
+    value: bigint,
+    opts: {
+      side: number;
+      queryId: number;
+      quantity: number;
+      price: number;
+      jettonMasterAddress: Address;
+      creatorAddress: Address;
+      expirationTime: number;
+    }
+  ) {
     await provider.internal(via, {
       value,
       sendMode: SendMode.PAY_GAS_SEPARATELY,
       body: beginCell()
-        .storeUint(0x26DE17E3, 32)
+        .storeUint(0x26de17e3, 32)
         .storeUint(opts.queryId, 64)
         .storeUint(opts.side, 1)
         .storeUint(opts.quantity, 64)
@@ -70,22 +86,26 @@ export class TonOrder implements Contract {
     });
   }
 
-  async sendClose(provider: ContractProvider, via: Sender, opts: {
-    value: bigint | string,
-    queryId: number,
-  }) {
+  async sendClose(
+    provider: ContractProvider,
+    via: Sender,
+    opts: {
+      value: bigint | string;
+      queryId: number;
+    }
+  ) {
     await provider.internal(via, {
       value: opts.value,
       sendMode: SendMode.PAY_GAS_SEPARATELY,
       body: beginCell()
-        .storeUint(0x26DE17E4, 32)
+        .storeUint(0x26de17e4, 32)
         .storeUint(opts.queryId, 64)
         .endCell(),
     });
   }
 
   async getOrderData(provider: ContractProvider) {
-    const { stack } = await provider.get('get_order_data', []);
+    const {stack} = await provider.get('get_order_data', []);
 
     const status = stack.readNumber();
     const side = stack.readNumber();

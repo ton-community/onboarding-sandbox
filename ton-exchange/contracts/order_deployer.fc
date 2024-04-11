@@ -117,9 +117,9 @@
 
     slice either_forward_payload = in_msg_body;
     int is_payload_invalid = check_if_fill_order_payload_invalid(either_forward_payload);
-    throw_unless_excesses(714, is_payload_invalid == 0, 
-                                query_id, jetton_amount, from_address, sender_address, 
-                                from_address, transfer_fee, forward_payload_value);
+    throw_unless_excesses(714, is_payload_invalid == 0,
+        query_id, jetton_amount, from_address, sender_address,
+        from_address, transfer_fee, forward_payload_value);
 
     var (owner_address, order_id, order_code, jetton_wallet_code, ton_order_code) = load_data();
 
@@ -134,12 +134,12 @@
     ;; jetton wallet address because it will be the same currency
     ;; throw_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? base_jetton_address : quote_jetton_address, jetton_wallet_code);
     int fraud = check_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? base_jetton_address : quote_jetton_address, jetton_wallet_code);
-    throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address, 
-                                from_address, transfer_fee, forward_payload_value);
+    throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address,
+        from_address, transfer_fee, forward_payload_value);
 
-    throw_unless_excesses(715, side == side::SELLER & (jetton_amount ^% price == 0), 
-                                query_id, jetton_amount, from_address, sender_address, 
-                                from_address, transfer_fee, forward_payload_value);
+    throw_unless_excesses(715, side == side::SELLER & (jetton_amount ^% price == 0),
+        query_id, jetton_amount, from_address, sender_address,
+        from_address, transfer_fee, forward_payload_value);
 
     ;; reserve tons for storage and current computations
     int ton_balance_before_msg = my_ton_balance - msg_value;
@@ -156,8 +156,8 @@
     int forward_ton_amount = fwd_fee + fee::order::fill_consumption();
 
     int is_msg_value_ok = msg_value > coins_for_deploy + forward_ton_amount + 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
-    throw_unless_excesses(900, is_msg_value_ok, query_id, jetton_amount, from_address, sender_address, 
-                                from_address, transfer_fee, forward_payload_value);
+    throw_unless_excesses(900, is_msg_value_ok, query_id, jetton_amount, from_address, sender_address,
+        from_address, transfer_fee, forward_payload_value);
 
     ;; reserve tons for deploy
     msg_value -= coins_for_deploy;
@@ -226,8 +226,8 @@
     int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage()) + forward_payload_value;
 
     int fraud = check_if_jetton_wallet_fraud_detected(sender_address, jetton_master_address, jetton_wallet_code);
-    throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address, 
-                                from_address, transfer_fee, forward_payload_value);
+    throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address,
+        from_address, transfer_fee, forward_payload_value);
 
     int quantity = jetton_amount;
     cell state_init = calculate_ton_order_state_init(my_address(), order_id, ton_order_code, jetton_wallet_code);
