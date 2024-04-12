@@ -21,7 +21,7 @@ int fee::order::close_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
 
     var msg = begin_cell()
         .store_uint(0x10, 6)
-        .store_slice(from_address)          ;; who closes order jetton wallet address
+        .store_slice(from_address)
         .store_coins(msg_value)
         .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
         .store_ref(msg_body.end_cell());
@@ -45,7 +45,8 @@ int fee::order::close_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
     }
 
     send_jettons(query_id, amount, to_address, from_address, excesses_address, msg_value, forward_payload_value);
-
+    
+    commit();
     throw(exit_code);
 }
 

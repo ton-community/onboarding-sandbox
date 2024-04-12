@@ -202,6 +202,11 @@ describe('OrderDeployer', () => {
       success: true,
     });
     expect(result.transactions).toHaveTransaction({
+      from: orderDeployerJettonWallet.address,
+      to: orderDeployer.address,
+      success: true,
+    });
+    expect(result.transactions).toHaveTransaction({
       from: orderDeployer.address,
       to: newOrderAddress,
       deploy: true,
@@ -332,4 +337,49 @@ describe('OrderDeployer', () => {
       await sellerSecondJettonWallet.getWalletJettonAmount();
     expect(sellerSecondJettonAmount).toEqual(500n);
   });
+
+  it('should not create order - invalid payload', async () => {
+    const expirationTime = Math.ceil(Date.now() / 1000) + 1000;
+    const side = 0;
+    const price = 5;
+    const jettonAmount = 100n;
+
+    var sellerJettonAmount = await sellerJettonWallet.getWalletJettonAmount();
+    expect(sellerJettonAmount).toEqual(totalAmount - jettonAmount);
+
+    // invalida payload - no timestamp
+    const result = await sellerJettonWallet.sendTransfer(seller.getSender(), {
+      value: toNano(1),
+      fwdAmount: toNano(0.6),
+      queryId: 9,
+      jettonAmount,
+      toAddress: orderDeployer.address,
+      forwardPayload: beginCell()
+        .storeUint(0x26de15e1, 32)
+        .storeRef(
+          beginCell()
+            .storeAddress(firstJettonMinter.address) // base_jetton_address
+            .storeAddress(secondJettonMinter.address) // quote_jetton_address
+            .storeUint(side, 1)
+            .storeUint(price, 32)
+            .endCell()
+        )
+        .endCell()
+        .asSlice(),
+    });
+
+    const orderDeployerData = await orderDeployer.getOrderDeployerData();
+    expect(orderDeployerData.orderId).toEqual(1);
+
+    expect(result.transactions).toHaveTransaction({
+      from: orderDeployerJettonWallet.address,
+      to: orderDeployer.address,
+      success: true,
+      exitCode: 714,
+    });
+
+    sellerJettonAmount = await sellerJettonWallet.getWalletJettonAmount();
+    expect(sellerJettonAmount).toEqual(totalAmount - jettonAmount);
+  });
+
 });
