@@ -339,15 +339,14 @@ describe('OrderDeployer', () => {
   });
 
   it('should not create order - invalid payload', async () => {
-    const expirationTime = Math.ceil(Date.now() / 1000) + 1000;
     const side = 0;
     const price = 5;
     const jettonAmount = 100n;
 
-    var sellerJettonAmount = await sellerJettonWallet.getWalletJettonAmount();
+    let sellerJettonAmount = await sellerJettonWallet.getWalletJettonAmount();
     expect(sellerJettonAmount).toEqual(totalAmount - jettonAmount);
 
-    // invalida payload - no timestamp
+    // invalid payload - no timestamp
     const result = await sellerJettonWallet.sendTransfer(seller.getSender(), {
       value: toNano(1),
       fwdAmount: toNano(0.6),
@@ -381,5 +380,4 @@ describe('OrderDeployer', () => {
     sellerJettonAmount = await sellerJettonWallet.getWalletJettonAmount();
     expect(sellerJettonAmount).toEqual(totalAmount - jettonAmount);
   });
-
 });
