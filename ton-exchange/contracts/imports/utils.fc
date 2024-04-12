@@ -36,7 +36,7 @@ int fee::order::close_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
         .store_coins(msg_value)
         .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1);
 
-    send_raw_message(msg.end_cell(), 2);
+    send_raw_message(msg.end_cell(), 0);
 }
 
 () throw_unless_excesses(int exit_code, int cond, int query_id, int amount, slice to_address, slice from_address, slice excesses_address, int msg_value, int forward_payload_value) impure inline {

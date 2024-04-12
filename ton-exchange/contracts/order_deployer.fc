@@ -40,10 +40,6 @@
     int price = in_msg_body~load_uint(32);
     int expiration_time_t = in_msg_body~load_uint(64);
 
-    ;; transfer + internal_transfer + notification
-    int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
-    int forward_payload_value = fwd_fee + fee::jetton::consumption();
-
     throw_unless_toncoins_excesses(915, ton_amount ^% price == 0, sender_address, ton_amount + fwd_fee + fee::jetton::consumption());
 
     int quantity = ton_amount / price;
@@ -53,13 +49,22 @@
     int storage_fee = fee::tons_for_storage() - min(ton_balance_before_msg, fee::tons_for_storage());
     msg_value -= (storage_fee + fee::deployer::create_consumption());
 
+    raw_reserve(fee::tons_for_storage(), 0);
+
+    int coins_without_ton_amount = 2 * fwd_fee + fee::ton_order::create_consumption() + fee::tons_for_storage();
+    int comission = coins_without_ton_amount * create_order_comission_percent / 100 + fwd_fee;
+
+    int coins_for_deploy = coins_without_ton_amount * comission + ton_amount;
+    throw_unless(979, msg_value > coins_for_deploy);
+
     cell state_init = calculate_ton_order_state_init(my_address(), order_id, ton_order_code, jetton_wallet_code);
     slice new_order_address = calculate_order_address(state_init);
 
-    raw_reserve(fee::tons_for_storage(), 0);
-
-    int coins_for_deploy = 2 * fwd_fee + fee::ton_order::create_consumption() + fee::tons_for_storage() + ton_amount;
-    throw_unless(979, msg_value > coins_for_deploy);
+    builder log = begin_cell()
+        .store_uint(order_type::TON, 1)
+        .store_uint(order_id, 32)
+        .store_slice(new_order_address);
+    send_log(log);
 
     ;; deploy and fill ton order
     var msg_body = begin_cell()
@@ -86,6 +91,10 @@
     send_raw_message(msg.end_cell(), 0);
 
     msg_value -= coins_for_deploy;
+
+    ;; commission
+    send_toncoins(owner_address, comission);
+    msg_value -= comission;
 
     if (msg_value > 0) {
         ;; exceeses
@@ -154,8 +163,10 @@
     ;; deploy + forward_fee + (transfer + internal_transfer + notification)
     int coins_for_deploy = fwd_fee + fee::order::create_consumption() + fee::tons_for_storage();
     int forward_ton_amount = fwd_fee + fee::order::fill_consumption();
+    int jetton_creationg_consumption = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
+    int comission = (coins_for_deploy + forward_ton_amount + jetton_creationg_consumption) * create_order_comission_percent / 100 + fwd_fee;
 
-    int is_msg_value_ok = msg_value > coins_for_deploy + forward_ton_amount + 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
+    int is_msg_value_ok = msg_value > coins_for_deploy + forward_ton_amount + jetton_creationg_consumption + comission;
     throw_unless_excesses(900, is_msg_value_ok, query_id, jetton_amount, from_address, sender_address,
         from_address, transfer_fee, forward_payload_value);
 
@@ -164,9 +175,9 @@
 
     ;; notify about new order
     builder log = begin_cell()
+        .store_uint(order_type::JETTON, 1)
         .store_uint(order_id, 32)
-        .store_slice(new_order_address)
-        .store_slice(from_address);
+        .store_slice(new_order_address);
     send_log(log);
 
     ;; deploy new order contract
@@ -187,6 +198,11 @@
         .store_ref(msg_body);
     send_raw_message(msg.end_cell(), 0);
 
+
+    ;; commission
+    send_toncoins(owner_address, comission);
+    msg_value -= comission;
+
     ;; send jetton to orders wallet
     var order_wallet_msg_body = begin_cell()
         .store_uint(op::transfer(), 32)
@@ -205,6 +221,7 @@
         .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
         .store_ref(order_wallet_msg_body.end_cell());
     send_raw_message(order_wallet_msg.end_cell(), 0);
+
 
     save_data(owner_address, order_id + 1, order_code, jetton_wallet_code, ton_order_code);
 }
@@ -243,7 +260,9 @@
     ;; deploy + forward_fee + (transfer + internal_transfer + notification)
     int coins_for_deploy = fwd_fee + fee::ton_order::create_consumption() + fee::tons_for_storage();
     int forward_ton_amount = fwd_fee + fee::ton_order::fill_consumption();
-    throw_unless(900, msg_value > coins_for_deploy + forward_ton_amount + 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage()));
+    int jetton_consumption = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage());
+    int comission = (coins_for_deploy + forward_ton_amount + jetton_consumption) * create_order_comission_percent / 100;
+    throw_unless(900, msg_value > coins_for_deploy + forward_ton_amount + jetton_consumption + comission);
 
     msg_value -= coins_for_deploy;
     ;; deploy
@@ -270,6 +289,10 @@
         .store_ref(msg_body);
     send_raw_message(msg.end_cell(), 0);
 
+    ;; commission
+    send_toncoins(owner_address, comission);
+    msg_value -= comission;
+
     ;; fill
     var order_wallet_msg_body = begin_cell()
         .store_uint(op::transfer(), 32)
@@ -292,9 +315,9 @@
 
     ;; notify about new order
     builder log = begin_cell()
+        .store_uint(order_type::TON, 1)
         .store_uint(order_id, 32)
-        .store_slice(new_order_address)
-        .store_slice(from_address);
+        .store_slice(new_order_address);
     send_log(log);
 
     save_data(owner_address, order_id + 1, order_code, jetton_wallet_code, ton_order_code);

@@ -1,3 +1,9 @@
+;; commision is taken from deploy and messages fees
+const create_order_comission_percent = 15;
+
+const order_type::JETTON = 0;
+const order_type::TON = 0;
+
 const side::SELLER = 0;
 const side::BUYER = 1;
 
