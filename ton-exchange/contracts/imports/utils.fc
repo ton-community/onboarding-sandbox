@@ -45,7 +45,7 @@ int fee::order::close_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
     }
 
     send_jettons(query_id, amount, to_address, from_address, excesses_address, msg_value, forward_payload_value);
-    
+
     commit();
     throw(exit_code);
 }
@@ -57,5 +57,6 @@ int fee::order::close_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
 
     send_toncoins(to_address, msg_value);
 
+    commit();
     throw(exit_code);
 }
