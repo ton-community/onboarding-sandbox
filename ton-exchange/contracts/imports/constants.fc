@@ -2,7 +2,7 @@
 const create_order_comission_percent = 15;
 
 const order_type::JETTON = 0;
-const order_type::TON = 0;
+const order_type::TON = 1;
 
 const side::SELLER = 0;
 const side::BUYER = 1;
