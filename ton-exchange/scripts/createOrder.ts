@@ -4,7 +4,7 @@ import {JettonWallet} from '../wrappers/JettonWallet';
 
 export async function run(provider: NetworkProvider) {
   const orderDeployerAddress = Address.parse(
-    'kQAIWBLY2aJUAA7cFhVk1HBhCUeasv5JQwcarMcF8EXdsBSh'
+    'EQBUyZ-t9VDxPZwKppqPycPPENH77yyRnQulLfCa9JGsODY-'
   );
 
   const baseMasterAddress = Address.parse(
@@ -17,7 +17,7 @@ export async function run(provider: NetworkProvider) {
   // kQBdLnykFt2Vbi7v5Gz7smM_quidjaqLzyD19b1QwUw54JPT -- GLEB'S Buy
   // kQDkPYFZC9w6h-_wZCZ959XBCv6IdLEFWMMqHTLcHFRc4_YH -- GLEB'S Sell
   const jettonWalletAddress = Address.parse(
-    'kQDkPYFZC9w6h-_wZCZ959XBCv6IdLEFWMMqHTLcHFRc4_YH'
+    'kQA8Q7m_pSNPr6FcqRYxllpAZv-0ieXy_KYER2iP195hBXiU'
   );
   const jettonWallet = provider.open(
     JettonWallet.createFromAddress(jettonWalletAddress)

@@ -54,7 +54,7 @@
     int coins_without_ton_amount = 2 * fwd_fee + fee::ton_order::create_consumption() + fee::tons_for_storage();
     int comission = coins_without_ton_amount * create_order_comission_percent / 100 + fwd_fee;
 
-    int coins_for_deploy = coins_without_ton_amount * comission + ton_amount;
+    int coins_for_deploy = coins_without_ton_amount + comission + ton_amount;
     throw_unless(979, msg_value > coins_for_deploy);
 
     cell state_init = calculate_ton_order_state_init(my_address(), order_id, ton_order_code, jetton_wallet_code);
