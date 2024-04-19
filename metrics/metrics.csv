@@ -1,0 +1,52 @@
+name,value,default_value,description,can_be_changed
+max_size,65535,65535,maximum external message size in bits,no
+max_depth,512,512,maximum external message depth,no
+max_msg_bits,2097152,2097152,maximum message size in bits,no
+max_msg_cells,8192,8192,maximum number of cells (a form of storage unit) a message can occupy,no
+max_vm_data_depth,512,512,maximum cell depth in messages and account state. maximum amount of actions,no
+max_library_cells,1000,1000,maximum number of library cells in library,no
+max_acc_state_cells,65536,65536,maximum number of cells that an account state can occupy,no
+max_acc_state_bits,67043328,67043328,maximum account state size in bits,no
+max_acc_public_libraries,256,256,maximum amount of public libraries for account. if account status is uninit and account is on masterchain then 0 else 256,no
+free_stack_depth,32,32,stack depth without gas consumption,no
+runvm_gas_price,40,40,vm start gas consumption,no
+flat_gas_limit,100,0,gas below flat_gas_limit is provided at price of flat_gas_price,yes
+flat_gas_price,100000,0,costs of launching the TON Virtual Machine,yes
+gas_price,65536000,0,price of gas in the network in nanotons per 65536 gas units,yes
+special_gas_limit,1000000,0,limit on the amount of gas that can be consumed per transaction of a special (system) contract,yes
+gas_limit,1000000,0,maximum amount of gas that can be consumed per transaction,yes
+gas_credit,10000,0,credit in gas units that is provided to transactions for the purpose of checking an external message,yes
+block_gas_limit,10000000,0,maximum amount of gas that can be consumed within a single block,yes
+freeze_due_limit,100000000,0,accumulated storage fees (in nanoTON) at which a contract is frozen,yes
+delete_due_limit,1000000000,0,accumulated storage fees (in nanoTON) at which a contract is frozen,yes
+bytes_underload,131072,0,limit on the block size in bytes. state when the shard realizes that there is no load and is inclined to merge,yes
+bytes_soft_limit,524288,0,limit on the block size in bytes. when this limit is reached internal messages stop being processed,yes
+bytes_hard_limit,1048576,0,absolute maximum bytes size of block,yes
+gas_underload,2000000,0,limit on the block size in gas. state when the shard realizes that there is no load and is inclined to merge,yes
+gas_soft_limit,10000000,0,limit on the block size in gas. when this limit is reached internal messages stop being processed,yes
+gas_hard_limit,20000000,0,absolute maximum gas of block,yes
+lt_delta_underload,1000,0,limits on the difference in logical time between the first and the last transaction. state when the shard realizes that there is no load and is inclined to merge,yes
+lt_delta_soft_limit,5000,0,limits on the difference in logical time between the first and the last transaction. when this limit is reached internal messages stop being processed,yes
+lt_delta_hard_limit,10000,0,absolute maximum difference in logical time between the first and the last transaction of block,yes
+lump_price,1000000,0,"base price for forwarding a message, regardless of its size or complexity",yes
+bit_price,65536000,0,cost per 65536 bit of message forwarding,yes
+cell_price,6553600000,0,cost per 65536 cells of message forwarding,yes
+ihr_factor,98304,0,factor used to calculate the cost of immediate hypercube routing (IHR),yes
+first_frac,21845,0,fraction of the remaining remainder that will be used for the first transition along the message route,yes
+next_frac,21845,0,fraction of the remaining remainder that will be used for subsequent transitions along the message route,yes
+utime_since,0,0,initial Unix timestamp from which the specified prices apply,yes
+bit_price_ps,1,1,storage price for one bit for 65536 seconds,yes
+cell_price_ps,500,500,storage price for one cell bit for 65536 seconds,yes
+mc_bit_price_ps,1000,1000,masterchain storage price for one bit for 65536 seconds,yes
+mc_cell_price_ps,500000,500000,masterchain storage price for one cell bit for 65536 seconds,yes
+mc_catchain_lifetime,250,200,lifetime of masterchain catchain groups in seconds,yes
+shard_catchain_lifetime,250,200,lifetime of shardchain catchain groups in seconds,yes
+shard_validators_lifetime,1000,3000,lifetime of a shardchain validators group in seconds,yes
+shard_validators_num,23,7,number of validators in each shardchain validation group,yes
+,,,,
+
+
+
+
+
+
