@@ -26,14 +26,9 @@ export async function run(provider: NetworkProvider) {
     toAddress: orderDeployerAddress,
     forwardPayload: beginCell()
       .storeUint(0x26de15e2, 32)
-      .storeRef(
-        beginCell()
-          .storeAddress(jettonWalletMasterAddress)
-          .storeUint(price, 32)
-          .storeUint(Math.ceil(Date.now() / 1000) + 1000, 64)
-          .endCell()
-      )
-      .endCell()
-      .asSlice(),
+      .storeAddress(jettonWalletMasterAddress)
+      .storeUint(price, 32)
+      .storeUint(Math.ceil(Date.now() / 1000) + 1000, 64)
+      .endCell(),
   });
 }

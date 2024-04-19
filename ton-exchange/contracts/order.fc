@@ -87,7 +87,7 @@
     ;; transfer + internal_transfer + notification
     int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage()) + forward_payload_value;
 
-    slice either_forward_payload = in_msg_body;
+    slice either_forward_payload = in_msg_body~load_maybe_ref().begin_parse();
     throw_unless_excesses(822, slice_bits(either_forward_payload) == 1 + 32, query_id, jetton_amount, from_address, sender_address,
                                 from_address, transfer_fee, forward_payload_value); ;; side, price
 

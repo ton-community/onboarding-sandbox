@@ -125,6 +125,9 @@
     int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage()) + forward_payload_value;
 
     slice either_forward_payload = in_msg_body;
+    either_forward_payload = either_forward_payload~load_maybe_ref().begin_parse();
+    either_forward_payload~skip_bits(32); ;; skip inner op-code
+
     int is_payload_invalid = check_if_fill_order_payload_invalid(either_forward_payload);
     throw_unless_excesses(714, is_payload_invalid == 0,
         query_id, jetton_amount, from_address, sender_address,
@@ -132,8 +135,7 @@
 
     var (owner_address, order_id, order_code, jetton_wallet_code, ton_order_code) = load_data();
 
-    slice cpy_payload = either_forward_payload;
-    slice payload = cpy_payload~load_ref().begin_parse(); ;; copy for extracting
+    slice payload = either_forward_payload;
     slice base_jetton_address = payload~load_msg_addr();
     slice quote_jetton_address = payload~load_msg_addr();
     int side = payload~load_uint(1);
@@ -212,7 +214,7 @@
         .store_slice(from_address)     ;; response_address for excesses
         .store_uint(0, 1)              ;; empty custom payload (either dict)
         .store_coins(forward_ton_amount)
-        .store_slice(either_forward_payload);
+        .store_maybe_ref(begin_cell().store_slice(either_forward_payload).end_cell());
 
     var order_wallet_msg = begin_cell()
         .store_uint(0x10, 6)
@@ -232,8 +234,9 @@
     slice from_address = in_msg_body~load_msg_addr(); ;; jetton's owner address - order creator
 
     var (owner_address, order_id, order_code, jetton_wallet_code, ton_order_code) = load_data();
-
-    slice payload = in_msg_body~load_ref().begin_parse();
+    
+    slice payload = in_msg_body~load_maybe_ref().begin_parse();
+    payload~skip_bits(32); ;; skip inner op-code
     slice jetton_master_address = payload~load_msg_addr();
     int price = payload~load_uint(32);
     int expiration_time_t = payload~load_uint(64);
@@ -347,8 +350,13 @@
     if (op == op::transfer_notification()) {
         var (slice_left, bits) = in_msg_body.skip_bits(64).load_uint(4);
         slice_left~skip_bits(bits * 8 + 267);
-        int inner_op = slice_left~load_uint(32);
 
+        if (slice_refs(slice_left) != 1) {
+            throw(0xeeee);
+        }
+
+        slice payload = slice_left~load_maybe_ref().begin_parse();
+        int inner_op = payload~load_uint(32);
         if (inner_op == op::notification::create_order()) {
             create_order(in_msg_body, sender_address, msg_value, fwd_fee, my_balance);
             return ();

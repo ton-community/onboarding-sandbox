@@ -63,7 +63,7 @@ export class JettonWallet implements Contract {
       queryId: number;
       fwdAmount: bigint;
       jettonAmount: bigint;
-      forwardPayload?: Maybe<Slice>;
+      forwardPayload?: Maybe<Cell>;
     }
   ) {
     const builder = beginCell()
@@ -75,12 +75,8 @@ export class JettonWallet implements Contract {
       .storeUint(0, 1)
       .storeCoins(opts.fwdAmount);
 
-    if (opts.forwardPayload) {
-      builder.storeSlice(opts.forwardPayload);
-    } else {
-      builder.storeUint(0, 1);
-    }
-
+    builder.storeMaybeRef(opts.forwardPayload);
+    // console.log(builder.endCell().toString());
     await provider.internal(via, {
       value: opts.value,
       sendMode: SendMode.PAY_GAS_SEPARATELY,

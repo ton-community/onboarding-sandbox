@@ -4,7 +4,7 @@ import {JettonWallet} from '../wrappers/JettonWallet';
 
 export async function run(provider: NetworkProvider) {
   const orderAddress = Address.parse(
-    'kQB4bC19cqS8pnamBeJ2AAEBavH4-viTbMf7GNiT1rd0QJ0p'
+    'kQCzU_5TtdZPMZ5tbzBbxLVbk6tL77RgIdbryEa6FVX-8Tn5'
   );
 
   // kQBdLnykFt2Vbi7v5Gz7smM_quidjaqLzyD19b1QwUw54JPT -- Buy
@@ -16,7 +16,7 @@ export async function run(provider: NetworkProvider) {
     JettonWallet.createFromAddress(jettonWalletAddress)
   );
 
-  const price = 5;
+  const price = 1;
   const side = 1;
   const queryId = 9;
 
@@ -24,12 +24,11 @@ export async function run(provider: NetworkProvider) {
     value: toNano(1),
     fwdAmount: toNano(0.7),
     queryId,
-    jettonAmount: toNano(300n),
+    jettonAmount: toNano(1n),
     toAddress: orderAddress,
     forwardPayload: beginCell()
       .storeUint(side, 1)
       .storeUint(price, 32)
-      .endCell()
-      .asSlice(),
+      .endCell(),
   });
 }

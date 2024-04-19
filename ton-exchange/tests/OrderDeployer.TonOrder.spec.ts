@@ -120,15 +120,10 @@ describe('OrderDeployer.TonOrder', () => {
       toAddress: orderDeployer.address,
       forwardPayload: beginCell()
         .storeUint(0x26de15e2, 32)
-        .storeRef(
-          beginCell()
-            .storeAddress(jettonMinter.address)
-            .storeUint(price, 32)
-            .storeUint(expirationTime, 64)
-            .endCell()
-        )
+        .storeAddress(jettonMinter.address)
+        .storeUint(price, 32)
+        .storeUint(expirationTime, 64)
         .endCell()
-        .asSlice(),
     });
 
     const {address: newOrderAddress} = await orderDeployer.getOrderAddress(

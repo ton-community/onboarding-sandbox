@@ -1,4 +1,4 @@
-import {Blockchain, SandboxContract, TreasuryContract} from '@ton/sandbox';
+import {Blockchain, SandboxContract, TreasuryContract, prettyLogTransactions} from '@ton/sandbox';
 import {Address, beginCell, Cell, toNano} from '@ton/core';
 import '@ton/test-utils';
 import {compile} from '@ton/blueprint';
@@ -168,30 +168,23 @@ describe('OrderDeployer', () => {
       toAddress: orderDeployer.address,
       forwardPayload: beginCell()
         .storeUint(0x26de15e1, 32)
-        .storeRef(
-          beginCell()
-            .storeAddress(firstJettonMinter.address) // base_jetton_address
-            .storeAddress(secondJettonMinter.address) // quote_jetton_address
-            .storeUint(side, 1)
-            .storeUint(price, 32)
-            .storeUint(expirationTime, 64)
-            .endCell()
-        )
+        .storeAddress(firstJettonMinter.address) // base_jetton_address
+        .storeAddress(secondJettonMinter.address) // quote_jetton_address
+        .storeUint(side, 1)
+        .storeUint(price, 32)
+        .storeUint(expirationTime, 64)
         .endCell()
-        .asSlice(),
     });
 
-    const orderDeployerData = await orderDeployer.getOrderDeployerData();
-    expect(orderDeployerData.orderId).toEqual(1);
+    // prettyLogTransactions(result.transactions);
 
     const {address: newOrderAddress} = await orderDeployer.getOrderAddress(
       0,
       0
     );
     orderAddress = newOrderAddress;
-
-    const orderJettonWalletAddress =
-      await firstJettonMinter.getWalletAddress(orderAddress);
+    
+    const orderJettonWalletAddress = await firstJettonMinter.getWalletAddress(orderAddress);
     orderJettonWallet = blockchain.openContract(
       JettonWallet.createFromAddress(orderJettonWalletAddress)
     );
@@ -218,6 +211,9 @@ describe('OrderDeployer', () => {
       success: true,
     });
 
+    const orderDeployerData = await orderDeployer.getOrderDeployerData();
+    expect(orderDeployerData.orderId).toEqual(1);
+    
     order = blockchain.openContract(Order.createFromAddress(newOrderAddress));
     const orderData = await order.getOrderData();
 
@@ -247,8 +243,7 @@ describe('OrderDeployer', () => {
       forwardPayload: beginCell()
         .storeUint(side, 1)
         .storeUint(price, 32)
-        .endCell()
-        .asSlice(),
+        .endCell(),
     });
 
     const orderJettonWalletAddress =
@@ -283,7 +278,7 @@ describe('OrderDeployer', () => {
       to: buyerSecondJettonWallet.address,
       success: true,
     });
-
+    
     const orderData = await order.getOrderData();
     expect(orderData.status).toEqual(2);
 
@@ -316,8 +311,7 @@ describe('OrderDeployer', () => {
       forwardPayload: beginCell()
         .storeUint(side, 1)
         .storeUint(price, 32)
-        .endCell()
-        .asSlice(),
+        .endCell(),
     });
 
     const orderData = await order.getOrderData();
@@ -355,16 +349,11 @@ describe('OrderDeployer', () => {
       toAddress: orderDeployer.address,
       forwardPayload: beginCell()
         .storeUint(0x26de15e1, 32)
-        .storeRef(
-          beginCell()
-            .storeAddress(firstJettonMinter.address) // base_jetton_address
-            .storeAddress(secondJettonMinter.address) // quote_jetton_address
-            .storeUint(side, 1)
-            .storeUint(price, 32)
-            .endCell()
-        )
+        .storeAddress(firstJettonMinter.address) // base_jetton_address
+        .storeAddress(secondJettonMinter.address) // quote_jetton_address
+        .storeUint(side, 1)
+        .storeUint(price, 32)
         .endCell()
-        .asSlice(),
     });
 
     const orderDeployerData = await orderDeployer.getOrderDeployerData();
