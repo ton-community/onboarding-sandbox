@@ -60,3 +60,14 @@ int fee::order::close_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
     commit();
     throw(exit_code);
 }
+
+(slice, slice) unpack_forward_payload(slice in_msg_body) impure inline {
+    cell payload_cell = in_msg_body~load_maybe_ref();
+    if (cell_null?(payload_cell) == 0) {
+        return (in_msg_body, payload_cell.begin_parse());
+    } 
+
+    ~dump(100500);
+    ~dump(slice_bits(in_msg_body));
+    return (in_msg_body, in_msg_body);
+}

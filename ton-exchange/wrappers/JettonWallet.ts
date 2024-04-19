@@ -84,6 +84,37 @@ export class JettonWallet implements Contract {
     });
   }
 
+  async sendTransferSlice(
+    provider: ContractProvider,
+    via: Sender,
+    opts: {
+      value: bigint;
+      toAddress: Address;
+      queryId: number;
+      fwdAmount: bigint;
+      jettonAmount: bigint;
+      forwardPayload: Slice;
+    }
+  ) {
+    const builder = beginCell()
+      .storeUint(0xf8a7ea5, 32)
+      .storeUint(opts.queryId, 64)
+      .storeCoins(opts.jettonAmount)
+      .storeAddress(opts.toAddress)
+      .storeAddress(via.address)
+      .storeUint(0, 1)
+      .storeCoins(opts.fwdAmount)
+      .storeUint(0, 1)
+      .storeSlice(opts.forwardPayload);
+
+    // console.log(builder.endCell().toString());
+    await provider.internal(via, {
+      value: opts.value,
+      sendMode: SendMode.PAY_GAS_SEPARATELY,
+      body: builder.endCell(),
+    });
+  }
+
   async sendBurn(
     provider: ContractProvider,
     via: Sender,

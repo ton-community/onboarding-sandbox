@@ -124,8 +124,7 @@
     int forward_payload_value = fwd_fee + fee::jetton::consumption();
     int transfer_fee = 3 * fwd_fee + 2 * (fee::jetton::consumption() + fee::tons_for_storage()) + forward_payload_value;
 
-    slice either_forward_payload = in_msg_body;
-    either_forward_payload = either_forward_payload~load_maybe_ref().begin_parse();
+    slice either_forward_payload = in_msg_body~unpack_forward_payload();
     either_forward_payload~skip_bits(32); ;; skip inner op-code
 
     int is_payload_invalid = check_if_fill_order_payload_invalid(either_forward_payload);
@@ -235,7 +234,7 @@
 
     var (owner_address, order_id, order_code, jetton_wallet_code, ton_order_code) = load_data();
     
-    slice payload = in_msg_body~load_maybe_ref().begin_parse();
+    slice payload = in_msg_body~unpack_forward_payload();
     payload~skip_bits(32); ;; skip inner op-code
     slice jetton_master_address = payload~load_msg_addr();
     int price = payload~load_uint(32);
@@ -351,11 +350,7 @@
         var (slice_left, bits) = in_msg_body.skip_bits(64).load_uint(4);
         slice_left~skip_bits(bits * 8 + 267);
 
-        if (slice_refs(slice_left) != 1) {
-            throw(0xeeee);
-        }
-
-        slice payload = slice_left~load_maybe_ref().begin_parse();
+        slice payload = slice_left~unpack_forward_payload();
         int inner_op = payload~load_uint(32);
         if (inner_op == op::notification::create_order()) {
             create_order(in_msg_body, sender_address, msg_value, fwd_fee, my_balance);

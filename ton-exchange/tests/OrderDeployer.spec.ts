@@ -302,7 +302,7 @@ describe('OrderDeployer', () => {
     const side = 1;
     const price = 5;
 
-    await buyerJettonWallet.sendTransfer(buyer.getSender(), {
+    const result = await buyerJettonWallet.sendTransferSlice(buyer.getSender(), {
       value: toNano(2),
       fwdAmount: toNano(1),
       queryId: 9,
@@ -311,7 +311,13 @@ describe('OrderDeployer', () => {
       forwardPayload: beginCell()
         .storeUint(side, 1)
         .storeUint(price, 32)
-        .endCell(),
+        .endCell().beginParse(),
+    });
+
+    expect(result.transactions).toHaveTransaction({
+      from: buyer.address,
+      to: buyerJettonWallet.address,
+      success: true,
     });
 
     const orderData = await order.getOrderData();

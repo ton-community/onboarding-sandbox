@@ -4,7 +4,7 @@ import {JettonWallet} from '../wrappers/JettonWallet';
 
 export async function run(provider: NetworkProvider) {
   const orderAddress = Address.parse(
-    'kQCzU_5TtdZPMZ5tbzBbxLVbk6tL77RgIdbryEa6FVX-8Tn5'
+    'kQCiHFyR_LaO9opddwl3NSOcEcOVj1A12_T1Tpc2BI7xgFZQ'
   );
 
   // kQBdLnykFt2Vbi7v5Gz7smM_quidjaqLzyD19b1QwUw54JPT -- Buy
@@ -20,7 +20,7 @@ export async function run(provider: NetworkProvider) {
   const side = 1;
   const queryId = 9;
 
-  await jettonWallet.sendTransfer(provider.sender(), {
+  await jettonWallet.sendTransferSlice(provider.sender(), {
     value: toNano(1),
     fwdAmount: toNano(0.7),
     queryId,
@@ -29,6 +29,6 @@ export async function run(provider: NetworkProvider) {
     forwardPayload: beginCell()
       .storeUint(side, 1)
       .storeUint(price, 32)
-      .endCell(),
+      .endCell().beginParse(),
   });
 }
