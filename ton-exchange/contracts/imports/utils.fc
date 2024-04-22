@@ -67,7 +67,5 @@ int fee::order::close_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
         return (in_msg_body, payload_cell.begin_parse());
     } 
 
-    ~dump(100500);
-    ~dump(slice_bits(in_msg_body));
     return (in_msg_body, in_msg_body);
 }

@@ -4,7 +4,7 @@ import {TonOrder} from '../wrappers/TonOrder';
 
 export async function run(provider: NetworkProvider) {
   const orderAddress = Address.parse(
-    'kQA7ZK0MccXneSxpXkA_h0jN3Em68Ky5DR51I8udMmBz29Ml'
+    'kQD56u5-_i2ORW6QD3AIKyraZhqPL0KNaAaZ31ba2mDe9H6w'
   );
 
   const order = provider.open(TonOrder.createFromAddress(orderAddress));

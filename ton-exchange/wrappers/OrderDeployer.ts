@@ -68,17 +68,22 @@ export class OrderDeployer implements Contract {
       expirationTime: number;
     }
   ) {
+
+    const body = beginCell()
+      .storeUint(0x26de17e2, 32)
+      .storeUint(opts.queryId, 64)
+      .storeAddress(opts.jettonMasterAddress)
+      .storeCoins(opts.tonAmount)
+      .storeUint(opts.price, 32)
+      .storeUint(opts.expirationTime, 64)
+    .endCell();
+
+    // console.log(body.toString());
+
     await provider.internal(via, {
       value: opts.value,
       sendMode: SendMode.PAY_GAS_SEPARATELY,
-      body: beginCell()
-        .storeUint(0x26de17e2, 32)
-        .storeUint(opts.queryId, 64)
-        .storeAddress(opts.jettonMasterAddress)
-        .storeCoins(opts.tonAmount)
-        .storeUint(opts.price, 32)
-        .storeUint(opts.expirationTime, 64)
-        .endCell(),
+      body: body,
     });
   }
 

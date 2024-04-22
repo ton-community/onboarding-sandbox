@@ -109,17 +109,26 @@
     int storage_fee = fee::tons_for_storage() - min(ton_balance_before_msg, fee::tons_for_storage());
     msg_value -= (storage_fee + fee::ton_order::close_consumption());
 
-    throw_unless(948, msg_value > 4 * fwd_fee + 2 * (fee::jetton::consumption() +  fee::tons_for_storage()));
+    int ton_amount = fwd_fee + quantity * price;
+
+    throw_unless(948, msg_value > ton_amount + 3 * fwd_fee + 2 * (fee::jetton::consumption() +  fee::tons_for_storage()));
 
     cell jetton_wallet_state_init = calculate_jetton_wallet_state_init(my_address(), jetton_master_address, jetton_wallet_code);
     slice order_jetton_wallet_address = calculate_jetton_wallet_address(jetton_wallet_state_init);
 
-    int ton_amount = fwd_fee + quantity * price;
-
     send_ton(query_id, from_address, ton_amount);
-    msg_value -= fwd_fee;
+    msg_value -= ton_amount;
 
     send_tokens(query_id, quantity, creator_address, order_jetton_wallet_address, from_address, msg_value, fwd_fee + fee::jetton::consumption() + fee::tons_for_storage());
+
+    ;; self destruct, quantity == 0
+    var msg_destruct = begin_cell()
+        .store_uint(0x10, 6)
+        .store_slice(creator_address)
+        .store_coins(0)
+        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_int(0, 8); ;; simple transfer to wallet
+    send_raw_message(msg_destruct.end_cell(), 128);
 
     save_data(status::CLOSED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
 }
@@ -152,19 +161,27 @@
     int ton_balance_before_msg = my_ton_balance - msg_value;
     int storage_fee = fee::tons_for_storage() - min(ton_balance_before_msg, fee::tons_for_storage());
     msg_value -= (storage_fee + fee::ton_order::close_consumption());
+    int ton_amount = quantity * price + fwd_fee;
 
-    throw_unless(933, msg_value > quantity * price + 4 * fwd_fee + 2 * (fee::jetton::consumption() +  fee::tons_for_storage()));
+    throw_unless(933, msg_value > ton_amount + 3 * fwd_fee + 2 * (fee::jetton::consumption() +  fee::tons_for_storage()));
 
     cell jetton_wallet_state_init = calculate_jetton_wallet_state_init(my_address(), jetton_master_address, jetton_wallet_code);
     slice order_jetton_wallet_address = calculate_jetton_wallet_address(jetton_wallet_state_init);
 
     ;; reserve tons for storage and current computations
-
-    int ton_amount = quantity * price + fwd_fee;
-    send_ton(query_id, creator_address, msg_value);
+    send_ton(query_id, creator_address, ton_amount);
     msg_value -= ton_amount;
 
-    send_tokens(query_id, quantity, sender_address, order_jetton_wallet_address, sender_address, msg_value, fwd_fee + fee::jetton::consumption() +  2 * fee::tons_for_storage());
+    send_tokens(query_id, quantity, sender_address, order_jetton_wallet_address, sender_address, msg_value, fwd_fee + fee::jetton::consumption() +  fee::tons_for_storage());
+
+    ;; self destruct, quantity == 0
+    var msg_destruct = begin_cell()
+        .store_uint(0x10, 6)
+        .store_slice(creator_address)
+        .store_coins(0)
+        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_int(0, 8); ;; simple transfer to wallet
+    send_raw_message(msg_destruct.end_cell(), 128);
 
     save_data(status::CLOSED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
 }
@@ -186,7 +203,9 @@
     cs~load_coins();                              ;; skip value
     cs~skip_bits(1);                              ;; skip extracurrency collection
     cs~load_coins();                              ;; skip ihr_fee
-    int fwd_fee = muldiv(cs~load_coins(), 3, 2);  ;; we use message fwd_fee for estimation of forward_payload costs
+
+    ;; TODO: improve with GETFORWARDFEE opcode
+    int fwd_fee = 2 * muldiv(cs~load_coins(), 3, 2);
 
     int op = in_msg_body~load_uint(32);
 

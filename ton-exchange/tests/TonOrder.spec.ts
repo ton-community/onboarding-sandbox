@@ -1,4 +1,4 @@
-import {Blockchain, SandboxContract, TreasuryContract} from '@ton/sandbox';
+import {Blockchain, SandboxContract, TreasuryContract, printTransactionFees} from '@ton/sandbox';
 import {beginCell, Cell, toNano} from '@ton/core';
 import '@ton/test-utils';
 import {compile} from '@ton/blueprint';
@@ -130,7 +130,7 @@ describe('TonOrder', () => {
   });
 
   it('should close', async () => {
-    await order.sendClose(seller.getSender(), {
+    const result = await order.sendClose(seller.getSender(), {
       value: toNano(1),
       queryId: 9,
     });

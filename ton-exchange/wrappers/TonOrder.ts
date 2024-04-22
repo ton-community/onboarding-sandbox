@@ -94,13 +94,18 @@ export class TonOrder implements Contract {
       queryId: number;
     }
   ) {
+
+    const body = beginCell()
+      .storeUint(0x26de17e4, 32)
+      .storeUint(opts.queryId, 64)
+      .endCell();
+
+    // console.log(body.toString());
+
     await provider.internal(via, {
       value: opts.value,
       sendMode: SendMode.PAY_GAS_SEPARATELY,
-      body: beginCell()
-        .storeUint(0x26de17e4, 32)
-        .storeUint(opts.queryId, 64)
-        .endCell(),
+      body: body,
     });
   }
 
