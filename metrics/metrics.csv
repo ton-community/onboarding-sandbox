@@ -1,52 +1,71 @@
-name,value,default_value,description,can_be_changed
-max_size,65535,65535,maximum external message size in bits,no
-max_depth,512,512,maximum external message depth,no
-max_msg_bits,2097152,2097152,maximum message size in bits,no
-max_msg_cells,8192,8192,maximum number of cells (a form of storage unit) a message can occupy,no
-max_vm_data_depth,512,512,maximum cell depth in messages and account state. maximum amount of actions,no
-max_library_cells,1000,1000,maximum number of library cells in library,no
-max_acc_state_cells,65536,65536,maximum number of cells that an account state can occupy,no
-max_acc_state_bits,67043328,67043328,maximum account state size in bits,no
-max_acc_public_libraries,256,256,maximum amount of public libraries for account. if account status is uninit and account is on masterchain then 0 else 256,no
-free_stack_depth,32,32,stack depth without gas consumption,no
-runvm_gas_price,40,40,vm start gas consumption,no
-flat_gas_limit,100,0,gas below flat_gas_limit is provided at price of flat_gas_price,yes
-flat_gas_price,100000,0,costs of launching the TON Virtual Machine,yes
-gas_price,65536000,0,price of gas in the network in nanotons per 65536 gas units,yes
-special_gas_limit,1000000,0,limit on the amount of gas that can be consumed per transaction of a special (system) contract,yes
-gas_limit,1000000,0,maximum amount of gas that can be consumed per transaction,yes
-gas_credit,10000,0,credit in gas units that is provided to transactions for the purpose of checking an external message,yes
-block_gas_limit,10000000,0,maximum amount of gas that can be consumed within a single block,yes
-freeze_due_limit,100000000,0,accumulated storage fees (in nanoTON) at which a contract is frozen,yes
-delete_due_limit,1000000000,0,accumulated storage fees (in nanoTON) at which a contract is frozen,yes
-bytes_underload,131072,0,limit on the block size in bytes. state when the shard realizes that there is no load and is inclined to merge,yes
-bytes_soft_limit,524288,0,limit on the block size in bytes. when this limit is reached internal messages stop being processed,yes
-bytes_hard_limit,1048576,0,absolute maximum bytes size of block,yes
-gas_underload,2000000,0,limit on the block size in gas. state when the shard realizes that there is no load and is inclined to merge,yes
-gas_soft_limit,10000000,0,limit on the block size in gas. when this limit is reached internal messages stop being processed,yes
-gas_hard_limit,20000000,0,absolute maximum gas of block,yes
-lt_delta_underload,1000,0,limits on the difference in logical time between the first and the last transaction. state when the shard realizes that there is no load and is inclined to merge,yes
-lt_delta_soft_limit,5000,0,limits on the difference in logical time between the first and the last transaction. when this limit is reached internal messages stop being processed,yes
-lt_delta_hard_limit,10000,0,absolute maximum difference in logical time between the first and the last transaction of block,yes
-lump_price,1000000,0,"base price for forwarding a message, regardless of its size or complexity",yes
-bit_price,65536000,0,cost per 65536 bit of message forwarding,yes
-cell_price,6553600000,0,cost per 65536 cells of message forwarding,yes
-ihr_factor,98304,0,factor used to calculate the cost of immediate hypercube routing (IHR),yes
-first_frac,21845,0,fraction of the remaining remainder that will be used for the first transition along the message route,yes
-next_frac,21845,0,fraction of the remaining remainder that will be used for subsequent transitions along the message route,yes
-utime_since,0,0,initial Unix timestamp from which the specified prices apply,yes
-bit_price_ps,1,1,storage price for one bit for 65536 seconds,yes
-cell_price_ps,500,500,storage price for one cell bit for 65536 seconds,yes
-mc_bit_price_ps,1000,1000,masterchain storage price for one bit for 65536 seconds,yes
-mc_cell_price_ps,500000,500000,masterchain storage price for one cell bit for 65536 seconds,yes
-mc_catchain_lifetime,250,200,lifetime of masterchain catchain groups in seconds,yes
-shard_catchain_lifetime,250,200,lifetime of shardchain catchain groups in seconds,yes
-shard_validators_lifetime,1000,3000,lifetime of a shardchain validators group in seconds,yes
-shard_validators_num,23,7,number of validators in each shardchain validation group,yes
-,,,,
-
-
-
-
-
-
+name,description,value,type,default_value
+max_size,maximum external message size in bits,65535,uint32,65535
+max_depth,maximum external message depth,512,uint16,512
+max_msg_bits,maximum message size in bits,2097152,uint32,2097152
+max_msg_cells,maximum number of cells (a form of storage unit) a message can occupy,8192,uint32,8192
+max_vm_data_depth,maximum cell depth in messages and account state. maximum amount of actions,512,uint16,512
+max_library_cells,maximum number of library cells in library,1000,uint32,1000
+max_acc_state_cells,maximum number of cells that an account state can occupy,65536,uint32,65536
+max_acc_state_bits,maximum account state size in bits,67043328,uint32,67043328
+max_acc_public_libraries,maximum amount of public libraries for account. if account status is uninit and account is on masterchain then 0 else 256,256,uint32,256
+free_stack_depth,stack depth without gas consumption,32,enum_value,32
+runvm_gas_price,vm start gas consumption,40,enum_value,40
+flat_gas_limit,gas below flat_gas_limit is provided at price of flat_gas_price,100,uint64,0
+flat_gas_price,costs of launching the TON Virtual Machine,100000,uint64,0
+gas_price,price of gas in the network in nanotons per 65536 gas units,65536000,uint64,0
+special_gas_limit,limit on the amount of gas that can be consumed per transaction of a special (system) contract,1000000,uint64,0
+gas_limit,maximum amount of gas that can be consumed per transaction,1000000,uint64,0
+gas_credit,credit in gas units that is provided to transactions for the purpose of checking an external message,10000,uint64,0
+block_gas_limit,maximum amount of gas that can be consumed within a single block,10000000,uint64,0
+freeze_due_limit,accumulated storage fees (in nanoTON) at which a contract is frozen,100000000,uint64,0
+delete_due_limit,accumulated storage fees (in nanoTON) at which a contract is frozen,1000000000,uint64,0
+mc_flat_gas_limit,gas below flat_gas_limit is provided at price of flat_gas_price on masterchain,100,uint64,0
+mc_flat_gas_price,costs of launching the TON Virtual Machine on masterchain,1000000,uint64,0
+mc_gas_price,price of gas in the network in nanotons per 65536 gas units on masterchain,655360000,uint64,0
+mc_special_gas_limit,limit on the amount of gas that can be consumed per transaction of a special (system) contract on masterchain,35000000,uint64,0
+mc_gas_limit,maximum amount of gas that can be consumed per transaction on masterchain,1000000,uint64,0
+mc_gas_credit,credit in gas units that is provided to transactions for the purpose of checking an external message on masterchain,10000,uint64,0
+mc_block_gas_limit,maximum amount of gas that can be consumed within a single block on masterchain,2500000,uint64,0
+mc_freeze_due_limit,accumulated storage fees (in nanoTON) at which a contract is frozen on masterchain,100000000,uint64,0
+mc_delete_due_limit,accumulated storage fees (in nanoTON) at which a contract is frozen on masterchain,1000000000,uint64,0
+bytes_underload,limit on the block size in bytes. state when the shard realizes that there is no load and is inclined to merge,131072,uint32,0
+bytes_soft_limit,limit on the block size in bytes. when this limit is reached internal messages stop being processed,524288,uint32,0
+bytes_hard_limit,absolute maximum bytes size of block,1048576,uint32,0
+gas_underload,limit on the block size in gas. state when the shard realizes that there is no load and is inclined to merge,2000000,uint32,0
+gas_soft_limit,limit on the block size in gas. when this limit is reached internal messages stop being processed,10000000,uint32,0
+gas_hard_limit,absolute maximum gas of block,20000000,uint32,0
+lt_delta_underload,limits on the difference in logical time between the first and the last transaction. state when the shard realizes that there is no load and is inclined to merge,1000,uint32,0
+lt_delta_soft_limit,limits on the difference in logical time between the first and the last transaction. when this limit is reached internal messages stop being processed,5000,uint32,0
+lt_delta_hard_limit,absolute maximum difference in logical time between the first and the last transaction of block,10000,uint32,0
+mc_bytes_underload,limit on the block size in bytes. state when the shard realizes that there is no load and is inclined to merge on masterchain,131072,uint32,0
+mc_bytes_soft_limit,limit on the block size in bytes. when this limit is reached internal messages stop being processed on masterchain,524288,uint32,0
+mc_bytes_hard_limit,absolute maximum bytes size of block on masterchain,1048576,uint32,0
+mc_gas_underload,limit on the block size in gas. state when the shard realizes that there is no load and is inclined to merge on masterchain,200000,uint32,0
+mc_gas_soft_limit,limit on the block size in gas. when this limit is reached internal messages stop being processed on masterchain,1000000,uint32,0
+mc_gas_hard_limit,absolute maximum gas of block on masterchain,2500000,uint32,0
+mc_lt_delta_underload,limits on the difference in logical time between the first and the last transaction. state when the shard realizes that there is no load and is inclined to merge on masterchain,1000,uint32,0
+mc_lt_delta_soft_limit,limits on the difference in logical time between the first and the last transaction. when this limit is reached internal messages stop being processed on masterchain,5000,uint32,0
+mc_lt_delta_hard_limit,absolute maximum difference in logical time between the first and the last transaction of block on masterchain,10000,uint32,0
+lump_price,"base price for forwarding a message, regardless of its size or complexity",400000,uint64,0
+bit_price,cost per 65536 bit of message forwarding,26214400,uint64,0
+cell_price,cost per 65536 cells of message forwarding,2621440000,uint64,0
+ihr_factor,factor used to calculate the cost of immediate hypercube routing (IHR),98304,uint32,0
+first_frac,fraction of the remaining remainder that will be used for the first transition along the message route,21845,uint32,0
+next_frac,fraction of the remaining remainder that will be used for subsequent transitions along the message route,21845,uint32,0
+mc_lump_price,"base price for forwarding a message, regardless of its size or complexity on masterchain",10000000,uint64,0
+mc_bit_price,cost per 65536 bit of message forwarding on masterchain,655360000,uint64,0
+mc_cell_price,cost per 65536 cells of message forwarding on masterchain,65536000000,uint64,0
+mc_ihr_factor,factor used to calculate the cost of immediate hypercube routing (IHR) on masterchain,98304,uint32,0
+mc_first_frac,fraction of the remaining remainder that will be used for the first transition along the message route on masterchain,21845,uint32,0
+mc_next_frac,fraction of the remaining remainder that will be used for subsequent transitions along the message route on masterchain,21845,uint32,0
+utime_since,initial Unix timestamp from which the specified prices apply,0,UnixTime,0
+bit_price_ps,storage price for one bit for 65536 seconds,1,uint64,1
+cell_price_ps,storage price for one cell bit for 65536 seconds,500,uint64,500
+mc_bit_price_ps,masterchain storage price for one bit for 65536 seconds,1000,uint64,1000
+mc_cell_price_ps,masterchain storage price for one cell bit for 65536 seconds,500000,uint64,500000
+mc_catchain_lifetime,lifetime of masterchain catchain groups in seconds,250,uint32,200
+shard_catchain_lifetime,lifetime of shardchain catchain groups in seconds,250,uint32,200
+shard_validators_lifetime,lifetime of a shardchain validators group in seconds,1000,uint32,3000
+shard_validators_num,number of validators in each shardchain validation group,23,uint32,7
+masterchain_block_fee,reward for block creation in the TON Blockchain,1700000000,Grams,0
+basechain_block_fee,number of validators in each shardchain validation group,1000000000,Grams,0
