@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "py-ton-exchange"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+packages = [ { include = "src" } ]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pytoniq = "^0.1.35"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry.scripts]
+app = "src.__main__:main"
