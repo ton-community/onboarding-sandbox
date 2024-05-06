@@ -1,0 +1,174 @@
+#include "imports/stdlib.fc";
+
+int get_fwd_fee(int cells, int bits, int is_mc) impure inline asm "GETFORWARDFEE";
+(slice, slice, int) dict_get_min?(cell dict, int key_len) asm (-> 1 0 2) "DICTMIN" "NULLSWAPIFNOT2";
+(slice, slice, int) dict_get_next?(cell dict, int key_len, slice pivot) asm(pivot dict key_len -> 1 0 2) "DICTGETNEXT" "NULLSWAPIFNOT2";
+
+;; ------- FEES ----------
+const fee::distributor_storage = 50000000; ;; 0.05 TON
+const fee::one_dict_iteration = 3500000; ;; 0.0035 TON
+const fee::starting_computation = 4000000; ;; 0.004 TON
+
+int fee::share_coins_computation(int dict_size) {
+    return fee::one_dict_iteration * dict_size + fee::starting_computation;
+}
+;; ------- FEES ----------
+
+;; ------- CONSTANTS ----------
+const cnst::addr_len = 267;
+const cnst::max_total_shares = 255;
+;; ------- CONSTANTS ----------
+
+int dict_get_size(cell dict) impure inline {
+    int size = 0;
+    var (addr, _, flag) = dict.dict_get_min?(cnst::addr_len);
+    while (flag) {
+        size += 1;
+        (addr, _, flag) = dict.dict_get_next?(cnst::addr_len, addr);
+    }
+
+    return size;
+}
+
+;; ------- OPCODES ----------
+const op::share_coins = "op::share_coins"c;
+const op::topup = "op::topup"c;
+const op::add_user = "op::add_user"c;
+;; ------- OPCODES ----------
+
+;; ------- ERRORS ----------
+const err::must_be_owner = 1201;
+const err::not_enough_ton_to_share = 1202;
+const err::shares_size_exceeded_limit = 1203;
+;; ------- ERRORS ----------
+
+;; ------- MSG ---------
+const msg::send_mode::default = 0;
+
+const msg::bits = 6 + 267 + 132 + 1 + 4 + 4 + 64 + 32 + 1 + 1 + 32;
+const msg::cells = 1;
+() msg::send_text(slice to_addr, int value, slice content, int mode) impure {
+    var msg = begin_cell()
+        .store_uint(0x10, 6)
+        .store_slice(to_addr)
+        .store_coins(value)
+        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_uint(0, 32)
+        .store_slice(content)
+        .end_cell();
+
+    send_raw_message(msg, mode);
+}
+;; ------- MSG ---------
+
+;; ----- STORAGE -------
+global slice storage::owner;
+global cell storage::shares;
+
+() load_data() impure inline {
+    var ds = get_data().begin_parse();
+
+    storage::owner = ds~load_msg_addr();
+    storage::shares = ds~load_dict();
+
+    ds.end_parse();
+}
+
+() save_data() impure inline {
+    set_data(
+        begin_cell()
+            .store_slice(storage::owner)
+            .store_dict(storage::shares)
+            .end_cell()
+    );
+}
+;; ----- STORAGE -------
+
+;; ----- LOGIC ---------
+() throw_unless_owner(slice address) impure inline {
+    throw_unless(err::must_be_owner, equal_slice_bits(address, storage::owner));
+}
+
+() add_user(slice sender_addr, slice in_msg_body) impure inline {
+    throw_unless_owner(sender_addr);
+
+    slice user_addr = in_msg_body~load_msg_addr();
+
+    int total_shares = storage::shares.dict_get_size();
+    throw_unless(err::shares_size_exceeded_limit, total_shares < cnst::max_total_shares);
+
+    storage::shares~dict_set_builder(
+        cnst::addr_len,
+        user_addr,
+        begin_cell().store_uint(1, 1)
+    );
+
+    save_data();
+    return ();
+}
+
+() share_coins(slice sender_addr, int my_balance, int msg_value) impure inline {
+    throw_unless_owner(sender_addr);
+
+    int total_shares = storage::shares.dict_get_size();
+    int fwd_fee = get_fwd_fee(msg::cells, msg::bits, 0);
+
+    int ton_balance_before_msg = my_balance - msg_value;
+
+    int storage_fee = fee::distributor_storage - min(ton_balance_before_msg, fee::distributor_storage);
+    msg_value -= (storage_fee + fee::share_coins_computation(total_shares));
+
+    throw_unless(err::not_enough_ton_to_share, total_shares * fwd_fee < msg_value);
+
+    msg_value -= total_shares * fwd_fee;
+    int distribution_portion = msg_value / total_shares;
+
+    (slice addr, _, int flag) = storage::shares.dict_get_min?(cnst::addr_len);
+    while (flag) {
+        msg::send_text(addr, fwd_fee + distribution_portion, "", msg::send_mode::default);
+        (addr, _, flag) = storage::shares.dict_get_next?(cnst::addr_len, addr);
+    }
+
+    save_data();
+    return ();
+}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    if (flags & 1) {
+        return (); ;; ignore all bounced messages
+    }
+    if (slice_bits(in_msg_body) == 0) {
+        return (); ;; ignore all empty messages
+    }
+
+    slice sender_addr = cs~load_msg_addr();
+
+    int opcode = in_msg_body~load_uint(32);
+    int query_id = in_msg_body~load_uint(64);
+
+    load_data();
+
+    if (opcode == op::add_user) {
+        add_user(sender_addr, in_msg_body);
+        return ();
+    }
+
+    if (opcode == op::share_coins) {
+        share_coins(sender_addr, my_balance, msg_value);
+        return ();
+    }
+
+    throw(0xffffff);
+}
+
+slice get_owner() method_id {
+    load_data();
+    return storage::owner;
+}
+
+cell get_shares() method_id {
+    load_data();
+    return storage::shares;
+}
