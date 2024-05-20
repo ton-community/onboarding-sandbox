@@ -36,7 +36,7 @@ describe('Distributor negative', () => {
 
         expect(deployResult.transactions).toHaveTransaction({
             from: owner.address,
-            to: distributor.address,
+            on: distributor.address,
             deploy: true,
             success: true
         });
@@ -52,7 +52,7 @@ describe('Distributor negative', () => {
 
         expect(result.transactions).toHaveTransaction({
             from: notOwner.address,
-            to: distributor.address,
+            on: distributor.address,
             success: false,
             exitCode: ExitCode.MUST_BE_OWNER
         });
@@ -61,29 +61,29 @@ describe('Distributor negative', () => {
     it('should add 255 users', async () => {
         // 255 is action list limit
         for (let i = 0; i < 255; ++i) {
-            const userWallet = await blockchain.treasury(`${i}`);
+            const userAddress = randomAddress();
             const result = await distributor.sendAddUser(owner.getSender(), {
                 value: toNano('0.5'),
-                userAddress: userWallet.address
+                userAddress,
             });
             expect(result.transactions).toHaveTransaction({
                 from: owner.address,
-                to: distributor.address,
+                on: distributor.address,
                 success: true
             });
         }
     });
 
     it('should not add one more user', async () => {
-        const userWallet = await blockchain.treasury(`256`);
+        const userAddress = randomAddress();
 
         const result = await distributor.sendAddUser(owner.getSender(), {
             value: toNano('0.5'),
-            userAddress: userWallet.address
+            userAddress,
         });
         expect(result.transactions).toHaveTransaction({
             from: owner.address,
-            to: distributor.address,
+            on: distributor.address,
             success: false,
             exitCode: ExitCode.SHARES_SIZE_EXCEEDED_LIMIT
         });
@@ -96,7 +96,7 @@ describe('Distributor negative', () => {
 
         expect(result.transactions).toHaveTransaction({
             from: owner.address,
-            to: distributor.address,
+            on: distributor.address,
             success: true
         });
 

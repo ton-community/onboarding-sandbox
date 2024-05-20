@@ -38,7 +38,7 @@ describe('Distributor positive flow', () => {
 
         expect(deployResult.transactions).toHaveTransaction({
             from: owner.address,
-            to: distributor.address,
+            on: distributor.address,
             deploy: true,
             success: true
         });
@@ -64,7 +64,7 @@ describe('Distributor positive flow', () => {
 
         expect(result.transactions).toHaveTransaction({
             from: owner.address,
-            to: distributor.address,
+            on: distributor.address,
             success: true
         });
 
@@ -80,13 +80,13 @@ describe('Distributor positive flow', () => {
 
         expect(result.transactions).toHaveTransaction({
             from: owner.address,
-            to: distributor.address,
+            on: distributor.address,
             outMessagesCount: 1,
             success: true
         });
         expect(result.transactions).toHaveTransaction({
             from: distributor.address,
-            to: firstUser.address,
+            on: firstUser.address,
             op: 0x0,
             success: true
         });
@@ -100,7 +100,7 @@ describe('Distributor positive flow', () => {
 
         expect(result.transactions).toHaveTransaction({
             from: owner.address,
-            to: distributor.address,
+            on: distributor.address,
             success: true
         });
 
@@ -119,24 +119,24 @@ describe('Distributor positive flow', () => {
 
         expect(result.transactions).toHaveTransaction({
             from: owner.address,
-            to: distributor.address,
+            on: distributor.address,
             success: true,
             outMessagesCount: 2
         });
         expect(result.transactions).toHaveTransaction({
             from: distributor.address,
-            to: firstUser.address,
+            on: firstUser.address,
             op: 0x0,
             success: true
         });
         expect(result.transactions).toHaveTransaction({
             from: distributor.address,
-            to: secondUser.address,
+            on: secondUser.address,
             op: 0x0,
             success: true
         });
-        const firstUserTransaction = findTransactionRequired(result.transactions, { to: firstUser.address });
-        const secondUserTransaction = findTransactionRequired(result.transactions, { to: secondUser.address });
+        const firstUserTransaction = findTransactionRequired(result.transactions, { on: firstUser.address });
+        const secondUserTransaction = findTransactionRequired(result.transactions, { on: secondUser.address });
 
         expect(flattenTransaction(firstUserTransaction).value).toEqual(flattenTransaction(secondUserTransaction).value);
     });

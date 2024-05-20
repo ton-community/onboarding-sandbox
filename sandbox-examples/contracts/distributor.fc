@@ -31,9 +31,9 @@ int dict_get_size(cell dict) impure inline {
 }
 
 ;; ------- OPCODES ----------
-const op::share_coins = "op::share_coins"c;
-const op::topup = "op::topup"c;
-const op::add_user = "op::add_user"c;
+const op::share_coins = 0x045ab564;
+const op::topup = 0x76e686d3;
+const op::add_user = 0x163990a0;
 ;; ------- OPCODES ----------
 
 ;; ------- ERRORS ----------

@@ -25,8 +25,8 @@ export function distributorConfigToCell(config: DistributorConfig): Cell {
 }
 
 export const Opcode = {
-    addUser: crc32.str('op::add_user'),
-    shareCoins: crc32.str('op::share_coins')
+    addUser: 0x163990a0,
+    shareCoins: 0x045ab564
 };
 
 export const ExitCode = {
