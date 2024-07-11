@@ -11,6 +11,7 @@ import {
   TupleBuilder,
 } from '@ton/core';
 import { Maybe } from '@ton/core/dist/utils/maybe';
+import { JettonMaster } from '@ton/ton';
 
 export type JettonMinterConfig = {
   adminAddress: Address;

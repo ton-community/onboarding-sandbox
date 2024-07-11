@@ -3,39 +3,38 @@ import "@stdlib/ownable";
 import "./imports/constants.tact";
 import "./imports/jetton.tact";
 import "./imports/types.tact";
+import "./imports/messages.tact";
+
+
+@name(get_data)
+native getData(): Cell?;
 
 struct OrderData {
     status: Int as uint8;
-    baseWalletAddress: Address?;
-    quoteWalletAddress: Address?;
-
-    side: Int as uint8 = 0;
-    quantity: Int as coins = 0;
-    price: Int as coins = 0;
+    creatorJettonAddress: Address?;
+    opponentJettonAddress: Address?;
+    
+    creatorJettonAmount: Int as coins = 0;
+    opponentJettonAmount: Int as coins = 0;
 
     orderId: Int as uint32;
     owner: Address; // deployer
     orderCreatorAddress: Address?;
     jettonWalletCode: Cell;
-
-    expirationTimeT: Int? as uint64;
 }
 
 contract Order with Ownable, JettonValidator {
     status: Int as uint8;
-    baseWalletAddress: Address?;
-    quoteWalletAddress: Address?;
-
-    side: Int as uint8 = 0;
-    quantity: Int as coins = 0;
-    price: Int as coins = 0;
+    creatorJettonAddress: Address?;
+    opponentJettonAddress: Address?;
+    
+    creatorJettonAmount: Int as coins = 0;
+    opponentJettonAmount: Int as coins = 0;
 
     orderId: Int as uint32;
     owner: Address; // deployer
     orderCreatorAddress: Address?;
     jettonWalletCode: Cell;
-
-    expirationTimeT: Int? as uint64;
 
     init(deployerAddress: Address, orderId: Int, jettonWalletCode: Cell) {
         self.status = OrderStatusNotInited;
@@ -45,17 +44,31 @@ contract Order with Ownable, JettonValidator {
         self.jettonWalletCode = jettonWalletCode;
     }
 
-    receive(msg: TokenNotification) {
-        let queryId = msg.queryId;
-        let jettonAmount = msg.jettonAmount;
-        let fromAddress = msg.fromAddress;
-        let payload = TokenNotificationPayload.fromSlice(msg.forwardPayload);
+    receive() {}
 
-        self.assertJettonIsValid(sender(), payload.side == SideSell ? payload.baseJettonAddress : payload.quoteJettonAddress);
-        dump(queryId);
+    receive(msg: InitOrder) {
+        self.requireOwner();
+        self.creatorJettonAddress = msg.creatorJettonAddress;
+        self.opponentJettonAddress = msg.opponentJettonAddress;
+        self.opponentJettonAmount = msg.opponentJettonAmount;
+        self.orderCreatorAddress = msg.orderCreatorAddress;
+        self.status = OrderStatusInited;
+    }
+
+    receive(msg: TokenNotification) {
+        if (self.status == OrderStatusInited && msg.fromAddress == self.owner) {
+            self.creatorJettonAmount = msg.jettonAmount;
+            self.status = OrderStatusFilled;
+            return;
+        }
+
+        if (self.status == OrderStatusFilled) {
+            // TODO: close order
+            return;
+        }
     }
     
     get fun orderData(): OrderData {
-        return OrderData.fromCell(self.toCell());
+        return OrderData.fromCell(getData());
     }
 }
