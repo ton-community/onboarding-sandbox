@@ -114,7 +114,7 @@ export class TonOrder implements Contract {
 
     const status = stack.readNumber();
     const side = stack.readNumber();
-    const quantity = stack.readNumber();
+    const total_amount = stack.readNumber();
     const price = stack.readNumber();
     const orderId = stack.readNumber();
     const deployerAddress = stack.readAddressOpt();
@@ -127,7 +127,7 @@ export class TonOrder implements Contract {
     return {
       status,
       side,
-      quantity,
+      total_amount,
       price,
       orderId,
       deployerAddress,

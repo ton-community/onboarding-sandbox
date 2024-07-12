@@ -35,7 +35,7 @@ describe('OrderDeployer', () => {
   let buyerJettonWallet: SandboxContract<JettonWallet>;
   let buyerSecondJettonWallet: SandboxContract<JettonWallet>;
 
-  const totalAmount = 10000n;
+  const totalAmount = 1000000000000n;
 
   beforeAll(async () => {
     blockchain = await Blockchain.create();
@@ -157,8 +157,8 @@ describe('OrderDeployer', () => {
   it('should create order', async () => {
     const expirationTime = Math.ceil(Date.now() / 1000) + 1000;
     const side = 0;
-    const price = 5 * Math.pow(10,9);
-    const jettonAmount = 100n;
+    const price = 2.85 * Math.pow(10,9);
+    const jettonAmount = toNano(0.7);
 
     const result = await sellerJettonWallet.sendTransfer(seller.getSender(), {
       value: toNano(1),
@@ -219,7 +219,7 @@ describe('OrderDeployer', () => {
 
     expect(orderData.status).toEqual(2);
     expect(orderData.price).toEqual(price);
-    expect(orderData.quantity).toEqual(Number(jettonAmount));
+    expect(orderData.total_amount).toEqual(jettonAmount);
     expect(orderData.expirationTime).toEqual(expirationTime);
 
     const orderJettonAmount = await orderJettonWallet.getWalletJettonAmount();
@@ -230,9 +230,9 @@ describe('OrderDeployer', () => {
   });
 
   it('should partially close', async () => {
-    const jettonAmount = 300n;
+    const jettonAmount = toNano(0.4);
     const side = 1;
-    const price = 5 * Math.pow(10,9);
+    const price = 2.85 * Math.pow(10,9);
 
     const result = await buyerJettonWallet.sendTransfer(buyer.getSender(), {
       value: toNano(2),
@@ -281,26 +281,29 @@ describe('OrderDeployer', () => {
     
     const orderData = await order.getOrderData();
     expect(orderData.status).toEqual(2);
+    expect(orderData.total_amount).toEqual(BigInt(0.7*Math.pow(10,9) - Math.floor(0.4 * Math.pow(10,9)/ 2.85)));
+    console.log(orderData.total_amount);
 
     const orderJettonAmount = await orderJettonWallet.getWalletJettonAmount();
-    expect(orderJettonAmount).toEqual(40n);
+    expect(orderJettonAmount).toEqual(orderData.total_amount);
 
     const buyerJettonAmount = await buyerJettonWallet.getWalletJettonAmount();
-    expect(buyerJettonAmount).toEqual(totalAmount - jettonAmount);
+    expect(buyerJettonAmount).toEqual(BigInt(Math.pow(10,12) - Math.floor(2.85*Math.floor(0.4 * Math.pow(10,9)/ 2.85))));
 
     const buyerSecondJettonAmount =
       await buyerSecondJettonWallet.getWalletJettonAmount();
-    expect(buyerSecondJettonAmount).toEqual(60n);
+    expect(buyerSecondJettonAmount).toEqual(BigInt(Math.floor(0.4 * Math.pow(10,9)/ 2.85)));
 
+    // partial close
     const sellerSecondJettonAmount =
       await sellerSecondJettonWallet.getWalletJettonAmount();
-    expect(sellerSecondJettonAmount).toEqual(jettonAmount);
+    expect(sellerSecondJettonAmount).toEqual(BigInt(Math.floor(2.85*Math.floor(0.4 * Math.pow(10,9)/ 2.85))));
   });
 
   it('should fully close', async () => {
-    const jettonAmount = 600n; // need 200 to close, but check jetton excess
+    const jettonAmount = toNano(2); // need approx 1.6 to close, but check jetton excess
     const side = 1;
-    const price = 5 * Math.pow(10,9);
+    const price = 2.85 * Math.pow(10,9);
 
     const result = await buyerJettonWallet.sendTransferSlice(buyer.getSender(), {
       value: toNano(2),
@@ -322,20 +325,23 @@ describe('OrderDeployer', () => {
 
     const orderData = await order.getOrderData();
     expect(orderData.status).toEqual(3);
+    expect(orderData.total_amount).toEqual(0n);
 
     const orderJettonAmount = await orderJettonWallet.getWalletJettonAmount();
-    expect(orderJettonAmount).toEqual(0n);
+    expect(orderJettonAmount).toEqual(orderData.total_amount);
 
     const buyerJettonAmount = await buyerJettonWallet.getWalletJettonAmount();
-    expect(buyerJettonAmount).toEqual(totalAmount - 500n);
+    // first balance - partial close - full close
+    expect(buyerJettonAmount).toEqual(BigInt(Math.pow(10,12) - Math.floor(2.85*Math.floor(0.4 * Math.pow(10,9)/ 2.85)) - Math.floor(2.85*559649123)));
 
     const buyerSecondJettonAmount =
       await buyerSecondJettonWallet.getWalletJettonAmount();
-    expect(buyerSecondJettonAmount).toEqual(100n);
-
+    expect(buyerSecondJettonAmount).toEqual(toNano(0.7));
+ 
     const sellerSecondJettonAmount =
       await sellerSecondJettonWallet.getWalletJettonAmount();
-    expect(sellerSecondJettonAmount).toEqual(500n);
+    // partial close + full close
+    expect(sellerSecondJettonAmount).toEqual(BigInt(Math.floor(2.85*Math.floor(0.4 * Math.pow(10,9)/ 2.85)) + Math.floor(2.85*559649123)));
   });
 
   it('should not create order - invalid payload', async () => {
@@ -344,7 +350,7 @@ describe('OrderDeployer', () => {
     const jettonAmount = 100n;
 
     let sellerJettonAmount = await sellerJettonWallet.getWalletJettonAmount();
-    expect(sellerJettonAmount).toEqual(totalAmount - jettonAmount);
+    expect(sellerJettonAmount).toEqual(totalAmount - toNano(0.7));
 
     // invalid payload - no timestamp
     const result = await sellerJettonWallet.sendTransfer(seller.getSender(), {
@@ -373,6 +379,6 @@ describe('OrderDeployer', () => {
     });
 
     sellerJettonAmount = await sellerJettonWallet.getWalletJettonAmount();
-    expect(sellerJettonAmount).toEqual(totalAmount - jettonAmount);
+    expect(sellerJettonAmount).toEqual(totalAmount - toNano(0.7));
   });
 });

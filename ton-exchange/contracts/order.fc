@@ -111,10 +111,15 @@
     int total_quantity = min(user_quantity, quantity);
 
     ;; remainder
-    user_quantity -= total_quantity;
+    int remainder = 0;
+    if (side == side::SELLER) {
+        remainder = jetton_amount - total_quantity * user_price / NORM_FACTOR;
+    } else {
+        remainder = jetton_amount - total_quantity;
+    }
 
     ;; exchange + current consumption
-    int total_consumption = (user_quantity > 0) ? 3 : 2 * (transfer_fee) + fee::order::close_consumption();
+    int total_consumption = (remainder > 0) ? 3 : 2 * (transfer_fee) + fee::order::close_consumption();
     throw_unless_excesses(950, msg_value > total_consumption, query_id, jetton_amount, from_address, sender_address,
                                 from_address, transfer_fee, forward_payload_value);
 
@@ -128,13 +133,9 @@
         send_jettons(query_id, total_quantity * price / NORM_FACTOR, from_address, wallet_address, from_address, transfer_fee, forward_payload_value);
     }
 
-    if (user_quantity > 0) {
+    if (remainder > 0) {
         ;; return jetton excess
-        if (user_side == side::SELLER) {
-            send_jettons(query_id, user_quantity, from_address, sender_address, from_address, transfer_fee, forward_payload_value);
-        } else {
-            send_jettons(query_id, user_quantity * user_price / NORM_FACTOR, from_address, sender_address, from_address, transfer_fee, forward_payload_value);
-        }
+        send_jettons(query_id, remainder, from_address, sender_address, from_address, transfer_fee, forward_payload_value);
     }
 
     ;; current user toncoin excesses
@@ -233,13 +234,11 @@
     }
 
     accept_message();
-    if (side == side::SELLER) {
-        var jetton_wallet_addres = calculate_user_jetton_wallet_address(my_address(), base_jetton_address, jetton_wallet_code);
-        var [balance, _] = get_balance();
 
-        ;; query id?
-        send_jettons(0, total_amount, creator_address, jetton_wallet_addres, creator_address, balance, 10000000);
-    }
+    var jetton_wallet_addres = calculate_user_jetton_wallet_address(my_address(), base_jetton_address, jetton_wallet_code);
+    var [balance, _] = get_balance();
+
+    send_jettons(0, total_amount, creator_address, jetton_wallet_addres, creator_address, balance, 10000000);
 
     save_data(status::EXPIRED, base_jetton_address, quote_jetton_address, side, 0, price, order_id, deployer_address, creator_address, wallet_address, order_code, jetton_wallet_code, expiration_time_t);
 }

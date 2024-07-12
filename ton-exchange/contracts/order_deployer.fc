@@ -149,10 +149,6 @@
     throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address,
         from_address, transfer_fee, forward_payload_value);
 
-    ;; throw_unless_excesses(715, jetton_amount ^% price == 0,
-    ;;     query_id, jetton_amount, from_address, sender_address,
-    ;;     from_address, transfer_fee, forward_payload_value);
-
     ;; reserve tons for storage and current computations
     int ton_balance_before_msg = my_ton_balance - msg_value;
     int storage_fee = fee::tons_for_storage() - min(ton_balance_before_msg, fee::tons_for_storage());

@@ -155,7 +155,7 @@ describe('OrderDeployer.TonOrder', () => {
 
     expect(orderData.status).toEqual(2);
     expect(orderData.price).toEqual(price);
-    expect(orderData.quantity).toEqual(Number(jettonAmount));
+    expect(orderData.total_amount).toEqual(Number(jettonAmount));
     expect(orderData.expirationTime).toEqual(expirationTime);
   });
 
@@ -192,7 +192,7 @@ describe('OrderDeployer.TonOrder', () => {
 
     expect(orderData.status).toEqual(2);
     expect(orderData.price).toEqual(price);
-    expect(orderData.quantity).toEqual(Number(tonAmount) / price);
+    expect(orderData.total_amount).toEqual(Number(tonAmount) / price);
     expect(orderData.expirationTime).toEqual(expirationTime);
   });
 });
