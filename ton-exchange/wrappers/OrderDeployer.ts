@@ -74,7 +74,7 @@ export class OrderDeployer implements Contract {
       .storeUint(opts.queryId, 64)
       .storeAddress(opts.jettonMasterAddress)
       .storeCoins(opts.tonAmount)
-      .storeUint(opts.price, 32)
+      .storeUint(opts.price, 64)
       .storeUint(opts.expirationTime, 64)
     .endCell();
 

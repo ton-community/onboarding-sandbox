@@ -1,4 +1,4 @@
-import {Blockchain, SandboxContract, TreasuryContract, prettyLogTransactions} from '@ton/sandbox';
+import {Blockchain, SandboxContract, TreasuryContract, prettyLogTransactions, printTransactionFees} from '@ton/sandbox';
 import {Address, beginCell, Cell, toNano} from '@ton/core';
 import '@ton/test-utils';
 import {compile} from '@ton/blueprint';
@@ -157,7 +157,7 @@ describe('OrderDeployer', () => {
   it('should create order', async () => {
     const expirationTime = Math.ceil(Date.now() / 1000) + 1000;
     const side = 0;
-    const price = 5;
+    const price = 5 * Math.pow(10,9);
     const jettonAmount = 100n;
 
     const result = await sellerJettonWallet.sendTransfer(seller.getSender(), {
@@ -171,13 +171,13 @@ describe('OrderDeployer', () => {
         .storeAddress(firstJettonMinter.address) // base_jetton_address
         .storeAddress(secondJettonMinter.address) // quote_jetton_address
         .storeUint(side, 1)
-        .storeUint(price, 32)
+        .storeUint(price, 64)
         .storeUint(expirationTime, 64)
         .endCell()
     });
 
     // prettyLogTransactions(result.transactions);
-
+    printTransactionFees(result.transactions);
     const {address: newOrderAddress} = await orderDeployer.getOrderAddress(
       0,
       0
@@ -232,7 +232,7 @@ describe('OrderDeployer', () => {
   it('should partially close', async () => {
     const jettonAmount = 300n;
     const side = 1;
-    const price = 5;
+    const price = 5 * Math.pow(10,9);
 
     const result = await buyerJettonWallet.sendTransfer(buyer.getSender(), {
       value: toNano(2),
@@ -242,7 +242,7 @@ describe('OrderDeployer', () => {
       toAddress: order.address,
       forwardPayload: beginCell()
         .storeUint(side, 1)
-        .storeUint(price, 32)
+        .storeUint(price, 64)
         .endCell(),
     });
 
@@ -300,7 +300,7 @@ describe('OrderDeployer', () => {
   it('should fully close', async () => {
     const jettonAmount = 600n; // need 200 to close, but check jetton excess
     const side = 1;
-    const price = 5;
+    const price = 5 * Math.pow(10,9);
 
     const result = await buyerJettonWallet.sendTransferSlice(buyer.getSender(), {
       value: toNano(2),
@@ -310,7 +310,7 @@ describe('OrderDeployer', () => {
       toAddress: order.address,
       forwardPayload: beginCell()
         .storeUint(side, 1)
-        .storeUint(price, 32)
+        .storeUint(price, 64)
         .endCell().beginParse(),
     });
 
@@ -340,7 +340,7 @@ describe('OrderDeployer', () => {
 
   it('should not create order - invalid payload', async () => {
     const side = 0;
-    const price = 5;
+    const price = 5 * Math.pow(10,9);
     const jettonAmount = 100n;
 
     let sellerJettonAmount = await sellerJettonWallet.getWalletJettonAmount();
@@ -358,7 +358,7 @@ describe('OrderDeployer', () => {
         .storeAddress(firstJettonMinter.address) // base_jetton_address
         .storeAddress(secondJettonMinter.address) // quote_jetton_address
         .storeUint(side, 1)
-        .storeUint(price, 32)
+        .storeUint(price, 64)
         .endCell()
     });
 

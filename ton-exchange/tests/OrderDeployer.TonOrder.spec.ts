@@ -121,7 +121,7 @@ describe('OrderDeployer.TonOrder', () => {
       forwardPayload: beginCell()
         .storeUint(0x26de15e2, 32)
         .storeAddress(jettonMinter.address)
-        .storeUint(price, 32)
+        .storeUint(price, 64)
         .storeUint(expirationTime, 64)
         .endCell()
     });

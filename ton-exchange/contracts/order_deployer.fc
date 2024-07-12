@@ -37,7 +37,7 @@
     int query_id = in_msg_body~load_uint(64);
     slice jetton_master_address = in_msg_body~load_msg_addr();
     int ton_amount = in_msg_body~load_coins();
-    int price = in_msg_body~load_uint(32);
+    int price = in_msg_body~load_uint(64);
     int expiration_time_t = in_msg_body~load_uint(64);
 
     throw_unless_toncoins_excesses(915, ton_amount ^% price == 0, sender_address, ton_amount + fwd_fee + fee::jetton::consumption());
@@ -71,8 +71,8 @@
         .store_uint(op::init_ton_order(), 32)
         .store_uint(query_id, 64)
         .store_uint(side::BUYER, 1)
-        .store_uint(quantity, 64)
-        .store_uint(price, 32)
+        .store_coins(quantity)
+        .store_uint(price, 64)
         .store_slice(jetton_master_address)
         .store_slice(sender_address)
         .store_uint(expiration_time_t, 64)
@@ -138,8 +138,10 @@
     slice base_jetton_address = payload~load_msg_addr();
     slice quote_jetton_address = payload~load_msg_addr();
     int side = payload~load_uint(1);
-    int price = payload~load_uint(32);
+    int price = payload~load_uint(64);
 
+    throw_unless_excesses(901, price >= NORM_FACTOR, query_id, jetton_amount, from_address, sender_address,
+        from_address, transfer_fee, forward_payload_value);
     ;; instead of order create jetton wallet address we use order deployer
     ;; jetton wallet address because it will be the same currency
     ;; throw_if_jetton_wallet_fraud_detected(sender_address, side == side::SELLER ? base_jetton_address : quote_jetton_address, jetton_wallet_code);
@@ -147,9 +149,9 @@
     throw_unless_excesses(899, fraud == 0, query_id, jetton_amount, from_address, sender_address,
         from_address, transfer_fee, forward_payload_value);
 
-    throw_unless_excesses(715, side == side::SELLER & (jetton_amount ^% price == 0),
-        query_id, jetton_amount, from_address, sender_address,
-        from_address, transfer_fee, forward_payload_value);
+    ;; throw_unless_excesses(715, jetton_amount ^% price == 0,
+    ;;     query_id, jetton_amount, from_address, sender_address,
+    ;;     from_address, transfer_fee, forward_payload_value);
 
     ;; reserve tons for storage and current computations
     int ton_balance_before_msg = my_ton_balance - msg_value;
@@ -237,7 +239,7 @@
     slice payload = in_msg_body~unpack_forward_payload();
     payload~skip_bits(32); ;; skip inner op-code
     slice jetton_master_address = payload~load_msg_addr();
-    int price = payload~load_uint(32);
+    int price = payload~load_uint(64);
     int expiration_time_t = payload~load_uint(64);
 
     ;; transfer + internal_transfer + notification
@@ -272,8 +274,8 @@
         .store_uint(op::init_ton_order(), 32)
         .store_uint(query_id, 64)
         .store_uint(side::SELLER, 1)
-        .store_uint(quantity, 64)
-        .store_uint(price, 32)
+        .store_coins(quantity)
+        .store_uint(price, 64)
         .store_slice(jetton_master_address)
         .store_slice(from_address)
         .store_uint(expiration_time_t, 64)

@@ -37,7 +37,7 @@ function orderConfigToCell(config: OrderConfig): Cell {
     )
     .storeUint(config.side, 1)
     .storeUint(config.quantity, 64)
-    .storeUint(config.price, 32)
+    .storeUint(config.price, 64)
     .storeUint(config.orderId, 32)
     .storeAddress(config.deployerAddress)
     .storeAddress(config.creatorAddress)

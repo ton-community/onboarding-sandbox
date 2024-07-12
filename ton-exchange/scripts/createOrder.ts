@@ -38,7 +38,7 @@ export async function run(provider: NetworkProvider) {
       .storeAddress(baseMasterAddress)
       .storeAddress(quoteMasterAddress)
       .storeUint(side, 1)
-      .storeUint(price, 32)
+      .storeUint(price, 64)
       .storeUint(Math.ceil(Date.now() / 1000) + 1000, 64)
       .endCell(),
   });

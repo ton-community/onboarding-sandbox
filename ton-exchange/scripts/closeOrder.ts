@@ -28,7 +28,7 @@ export async function run(provider: NetworkProvider) {
     toAddress: orderAddress,
     forwardPayload: beginCell()
       .storeUint(side, 1)
-      .storeUint(price, 32)
+      .storeUint(price, 64)
       .endCell().beginParse(),
   });
 }

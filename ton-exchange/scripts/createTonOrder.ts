@@ -27,7 +27,7 @@ export async function run(provider: NetworkProvider) {
     forwardPayload: beginCell()
       .storeUint(0x26de15e2, 32)
       .storeAddress(jettonWalletMasterAddress)
-      .storeUint(price, 32)
+      .storeUint(price, 64)
       .storeUint(Math.ceil(Date.now() / 1000) + 1000, 64)
       .endCell(),
   });

@@ -5,7 +5,7 @@ cell pack_ton_order_data(int status, int side, int quantity, int price, int orde
         .store_uint(status, 3)
         .store_uint(side, 1)
         .store_uint(quantity, 64)
-        .store_uint(price, 32)
+        .store_uint(price, 64)
         .store_uint(order_id, 32)
         .store_slice(deployer_address)
         .store_slice(creator_address)
