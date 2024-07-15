@@ -16,7 +16,7 @@ export async function run(provider: NetworkProvider) {
     OrderDeployer.createFromConfig(
       {
         admin: Address.parse(
-          '0QA__NJI1SLHyIaG7lQ6OFpAe9kp85fwPr66YwZwFc0p5wIu'
+          '0QD-SuoCHsCL2pIZfE8IAKsjc0aDpDUQAoo-ALHl2mje04A-'
         ),
         orderId: 0,
         orderCode: await compile('Order'),

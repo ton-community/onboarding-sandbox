@@ -20,12 +20,10 @@ contract OrderDeployer with Ownable, JettonValidator, Deployable {
     }
 
     receive(msg: TokenNotification) {
-        dump("1");
-
         let queryId = msg.queryId;
         let jettonAmount = msg.jettonAmount;
         let fromAddress = msg.fromAddress;
-        let payload = TokenNotificationPayload.fromSlice(msg.forwardPayload);
+        let payload = TokenNotificationPayload.fromCell(msg.forwardPayload.loadRef()); // TODO: ask is load ref good or not
 
         self.assertJettonIsValid(sender(), payload.creatorJettonAddress);
 
@@ -46,6 +44,8 @@ contract OrderDeployer with Ownable, JettonValidator, Deployable {
             }.toCell(),
         });
 
+        dump("INIT");
+
         self.nextOrderId += 1;
 
         send(SendParameters{
@@ -59,7 +59,7 @@ contract OrderDeployer with Ownable, JettonValidator, Deployable {
                 responseDestination: fromAddress,
                 customPayload: null,
                 forwardTonAmount: ton("0.1"),
-                forwardPayload: beginCell().endCell().beginParse(), // TODO: THIS IS BAD FOR GAS OMG IDK HOW TO FIX IT IN TACT
+                forwardPayload: beginCell().storeUint(0, 1).endCell().beginParse(), // TODO: THIS IS BAD FOR GAS OMG IDK HOW TO FIX IT IN TACT
             }.toCell(),
         });
     }
@@ -69,6 +69,6 @@ contract OrderDeployer with Ownable, JettonValidator, Deployable {
     }
 
     get fun orderAddress(orderId: Int): Address {
-        return contractAddress(initOf Order(myAddress(), self.nextOrderId, self.jettonWalletCode))
+        return contractAddress(initOf Order(myAddress(), orderId, self.jettonWalletCode))
     }
 }

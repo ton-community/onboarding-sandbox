@@ -13,7 +13,7 @@ struct OrderData {
     status: Int as uint8;
     creatorJettonAddress: Address?;
     opponentJettonAddress: Address?;
-    
+
     creatorJettonAmount: Int as coins = 0;
     opponentJettonAmount: Int as coins = 0;
 
@@ -27,7 +27,7 @@ contract Order with Ownable, JettonValidator {
     status: Int as uint8;
     creatorJettonAddress: Address?;
     opponentJettonAddress: Address?;
-    
+
     creatorJettonAmount: Int as coins = 0;
     opponentJettonAmount: Int as coins = 0;
 
@@ -67,8 +67,18 @@ contract Order with Ownable, JettonValidator {
             return;
         }
     }
-    
+
     get fun orderData(): OrderData {
-        return OrderData.fromCell(getData());
+        return OrderData{
+            status: self.status,
+            creatorJettonAddress: self.creatorJettonAddress,
+            opponentJettonAddress: self.opponentJettonAddress,
+            creatorJettonAmount: self.creatorJettonAmount,
+            opponentJettonAmount: self.opponentJettonAmount,
+            orderId: self.orderId,
+            owner: self.owner,
+            orderCreatorAddress: self.orderCreatorAddress,
+            jettonWalletCode: self.jettonWalletCode,
+        };
     }
 }

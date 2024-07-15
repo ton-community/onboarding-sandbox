@@ -1,4 +1,4 @@
-import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
+import { Blockchain, prettyLogTransactions, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { Address, beginCell, Cell, toNano } from '@ton/core';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
@@ -162,8 +162,6 @@ describe('OrderDeployer', () => {
             })).endCell()
         });
 
-        // prettyLogTransactions(result.transactions);
-
         orderAddress = await orderDeployer.getOrderAddress(0n);
 
         const orderJettonWalletAddress = await firstJettonMinter.getWalletAddress(orderAddress);
@@ -194,12 +192,12 @@ describe('OrderDeployer', () => {
         });
 
         const orderId = await orderDeployer.getOrderId();
-        expect(orderId).toEqual(1);
+        expect(orderId).toEqual(1n);
 
         order = blockchain.openContract(Order.fromAddress(orderAddress));
         const orderData = await order.getOrderData();
 
-        expect(orderData.status).toEqual(2);
+        expect(orderData.status).toEqual(2n);
         expect(orderData.opponentJettonAmount).toEqual(opponentJettonAmount)
         expect(orderData.creatorJettonAmount).toEqual(jettonAmount)
         expect(orderData.creatorJettonAddress).toEqualAddress(firstJettonMinter.address);
