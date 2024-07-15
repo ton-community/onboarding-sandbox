@@ -33,7 +33,6 @@ contract OrderDeployer with Ownable, JettonValidator, Deployable {
         send(SendParameters{
             to: orderAddress,
             value: ton("0.2"),
-            mode: 0,
             code: orderStateInit.code,
             data: orderStateInit.data,
             body: InitOrder{
@@ -44,14 +43,11 @@ contract OrderDeployer with Ownable, JettonValidator, Deployable {
             }.toCell(),
         });
 
-        dump("INIT");
-
         self.nextOrderId += 1;
 
         send(SendParameters{
             to: sender(), // sender - jetton wallet address
-            value: ton("0.3"),
-            mode: 0,
+            value: ton("0.2"),
             body: TokenTransfer{
                 queryId,
                 amount: jettonAmount,

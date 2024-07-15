@@ -36,8 +36,12 @@ fun calculateJettonWalletAddress(ownerAddress: Address, jettonMasterAddress: Add
 trait JettonValidator {
     jettonWalletCode: Cell;
 
+    fun calculateMyJettonAddress(jettonMasterAddress: Address): Address {
+        return calculateJettonWalletAddress(myAddress(), jettonMasterAddress, self.jettonWalletCode);
+    }
+
     fun assertJettonIsValid(jettonAddress: Address, jettonMasterAddress: Address) {
-        let calculatedAddress = calculateJettonWalletAddress(myAddress(), jettonMasterAddress, self.jettonWalletCode);
+        let calculatedAddress = self.calculateMyJettonAddress(jettonMasterAddress);
         nativeThrowUnless(999, jettonAddress == calculatedAddress);
     }
 }

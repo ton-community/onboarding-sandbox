@@ -27,12 +27,13 @@ describe('OrderDeployer', () => {
 
     let orderDeployerJettonWallet: SandboxContract<JettonWallet>;
     let orderJettonWallet: SandboxContract<JettonWallet>;
-    let sellerJettonWallet: SandboxContract<JettonWallet>;
+    let sellerFirstJettonWallet: SandboxContract<JettonWallet>;
     let sellerSecondJettonWallet: SandboxContract<JettonWallet>;
-    let buyerJettonWallet: SandboxContract<JettonWallet>;
     let buyerSecondJettonWallet: SandboxContract<JettonWallet>;
+    let buyerFirstJettonWallet: SandboxContract<JettonWallet>;
 
-    const totalAmount = 10000n;
+    const firstAmount = 1000n;
+    const secondAmount = 2000n;
 
     beforeAll(async () => {
         blockchain = await Blockchain.create();
@@ -66,7 +67,7 @@ describe('OrderDeployer', () => {
         );
         await firstJettonMinter.sendDeploy(deployer.getSender(), toNano(0.25));
         await firstJettonMinter.sendMint(deployer.getSender(), {
-            jettonAmount: totalAmount,
+            jettonAmount: firstAmount,
             queryId: 9,
             toAddress: seller.address,
             amount: toNano(1),
@@ -85,14 +86,14 @@ describe('OrderDeployer', () => {
         );
         await secondJettonMinter.sendDeploy(deployer.getSender(), toNano(0.25));
         await secondJettonMinter.sendMint(deployer.getSender(), {
-            jettonAmount: totalAmount,
+            jettonAmount: secondAmount,
             queryId: 9,
             toAddress: buyer.address,
             amount: toNano(1),
             value: toNano(2)
         });
 
-        sellerJettonWallet = blockchain.openContract(
+        sellerFirstJettonWallet = blockchain.openContract(
             JettonWallet.createFromAddress(
                 await firstJettonMinter.getWalletAddress(seller.address)
             )
@@ -102,12 +103,12 @@ describe('OrderDeployer', () => {
                 await secondJettonMinter.getWalletAddress(seller.address)
             )
         );
-        buyerJettonWallet = blockchain.openContract(
+        buyerSecondJettonWallet = blockchain.openContract(
             JettonWallet.createFromAddress(
                 await secondJettonMinter.getWalletAddress(buyer.address)
             )
         );
-        buyerSecondJettonWallet = blockchain.openContract(
+        buyerFirstJettonWallet = blockchain.openContract(
             JettonWallet.createFromAddress(
                 await firstJettonMinter.getWalletAddress(buyer.address)
             )
@@ -145,20 +146,18 @@ describe('OrderDeployer', () => {
     it('should create order', async () => {
         const expirationTime = Math.ceil(Date.now() / 1000) + 1000;
         const price = 5;
-        const jettonAmount = 100n;
-        const opponentJettonAmount = 1000n;
 
-        const result = await sellerJettonWallet.sendTransfer(seller.getSender(), {
+        const result = await sellerFirstJettonWallet.sendTransfer(seller.getSender(), {
             value: toNano(2),
             fwdAmount: toNano(1),
             queryId: 9,
-            jettonAmount,
+            jettonAmount: firstAmount,
             toAddress: orderDeployer.address,
             forwardPayload: beginCell().store(storeTokenNotificationPayload({
                 $$type: 'TokenNotificationPayload',
                 creatorJettonAddress: firstJettonMinter.address,
                 opponentJettonAddress: secondJettonMinter.address,
-                opponentJettonAmount,
+                opponentJettonAmount: secondAmount,
             })).endCell()
         });
 
@@ -171,7 +170,7 @@ describe('OrderDeployer', () => {
 
         expect(result.transactions).toHaveTransaction({
             from: seller.address,
-            to: sellerJettonWallet.address,
+            to: sellerFirstJettonWallet.address,
             success: true
         });
         expect(result.transactions).toHaveTransaction({
@@ -198,57 +197,47 @@ describe('OrderDeployer', () => {
         const orderData = await order.getOrderData();
 
         expect(orderData.status).toEqual(2n);
-        expect(orderData.opponentJettonAmount).toEqual(opponentJettonAmount)
-        expect(orderData.creatorJettonAmount).toEqual(jettonAmount)
+        expect(orderData.opponentJettonAmount).toEqual(secondAmount);
+        expect(orderData.creatorJettonAmount).toEqual(firstAmount);
         expect(orderData.creatorJettonAddress).toEqualAddress(firstJettonMinter.address);
         expect(orderData.opponentJettonAddress).toEqualAddress(secondJettonMinter.address);
         expect(orderData.orderCreatorAddress).toEqualAddress(seller.address);
 
         const orderJettonAmount = await orderJettonWallet.getWalletJettonAmount();
-        expect(orderJettonAmount).toEqual(jettonAmount);
+        expect(orderJettonAmount).toEqual(firstAmount);
 
-        const sellerJettonAmount = await sellerJettonWallet.getWalletJettonAmount();
-        expect(sellerJettonAmount).toEqual(totalAmount - jettonAmount);
+        const sellerJettonAmount = await sellerFirstJettonWallet.getWalletJettonAmount();
+        expect(sellerJettonAmount).toEqual(0n);
     });
 
-//   it('should fully close', async () => {
-//     const jettonAmount = 600n; // need 200 to close, but check jetton excess
-//     const side = 1;
-//     const price = 5;
+    it('should close', async () => {
+        const result = await buyerSecondJettonWallet.sendTransferSlice(buyer.getSender(), {
+            value: toNano(2),
+            fwdAmount: toNano(1),
+            queryId: 9,
+            jettonAmount: secondAmount,
+            toAddress: order.address,
+            forwardPayload: beginCell().storeUint(1, 1).endCell().beginParse()
+        });
 
-//     const result = await buyerJettonWallet.sendTransferSlice(buyer.getSender(), {
-//       value: toNano(2),
-//       fwdAmount: toNano(1),
-//       queryId: 9,
-//       jettonAmount,
-//       toAddress: order.address,
-//       forwardPayload: beginCell()
-//         .storeUint(side, 1)
-//         .storeUint(price, 32)
-//         .endCell().beginParse(),
-//     });
+        expect(result.transactions).toHaveTransaction({
+            from: buyer.address,
+            to: buyerSecondJettonWallet.address,
+            success: true
+        });
 
-//     expect(result.transactions).toHaveTransaction({
-//       from: buyer.address,
-//       to: buyerJettonWallet.address,
-//       success: true,
-//     });
+        const orderData = await order.getOrderData();
+        expect(orderData.status).toEqual(3n);
 
-//     const orderData = await order.getOrderData();
-//     expect(orderData.status).toEqual(3);
+        const sellerSecondJettonAmount = await sellerSecondJettonWallet.getWalletJettonAmount();
+        expect(sellerSecondJettonAmount).toEqual(secondAmount);
 
-//     const orderJettonAmount = await orderJettonWallet.getWalletJettonAmount();
-//     expect(orderJettonAmount).toEqual(0n);
+        expect(result.transactions).toHaveTransaction({
+            from: buyerFirstJettonWallet.address,
+            to: buyer.address,
+        });
 
-//     const buyerJettonAmount = await buyerJettonWallet.getWalletJettonAmount();
-//     expect(buyerJettonAmount).toEqual(totalAmount - 500n);
-
-//     const buyerSecondJettonAmount =
-//       await buyerSecondJettonWallet.getWalletJettonAmount();
-//     expect(buyerSecondJettonAmount).toEqual(100n);
-
-//     const sellerSecondJettonAmount =
-//       await sellerSecondJettonWallet.getWalletJettonAmount();
-//     expect(sellerSecondJettonAmount).toEqual(500n);
-//   });
+        const buyerFirstJettonAmount = await buyerFirstJettonWallet.getWalletJettonAmount();
+        expect(buyerFirstJettonAmount).toEqual(firstAmount);
+    });
 });

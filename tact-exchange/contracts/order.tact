@@ -6,9 +6,6 @@ import "./imports/types.tact";
 import "./imports/messages.tact";
 
 
-@name(get_data)
-native getData(): Cell?;
-
 struct OrderData {
     status: Int as uint8;
     creatorJettonAddress: Address?;
@@ -63,9 +60,44 @@ contract Order with Ownable, JettonValidator {
         }
 
         if (self.status == OrderStatusFilled) {
-            // TODO: close order
+            self.assertJettonIsValid(sender(), self.opponentJettonAddress!!);
+            nativeThrowUnless(910, msg.jettonAmount == self.opponentJettonAmount);
+
+            send(SendParameters{
+                to: sender(),
+                value: ton("0.2"),
+                body: TokenTransfer{
+                    queryId: msg.queryId,
+                    amount: msg.jettonAmount,
+                    destination: self.orderCreatorAddress!!,
+                    responseDestination: self.orderCreatorAddress!!,
+                    customPayload: null,
+                    forwardTonAmount: 1,
+                    forwardPayload: beginCell().storeUint(0, 1).endCell().beginParse(), // TODO: THIS IS BAD FOR GAS OMG IDK HOW TO FIX IT IN TACT
+                }.toCell(),
+            });
+
+            let orderFirstJettonWalletAddress = self.calculateMyJettonAddress(self.creatorJettonAddress!!);
+
+            send(SendParameters{
+                to: orderFirstJettonWalletAddress,
+                value: ton("0.2"),
+                body: TokenTransfer{
+                    queryId: msg.queryId,
+                    amount: self.creatorJettonAmount,
+                    destination: msg.fromAddress,
+                    responseDestination: msg.fromAddress,
+                    customPayload: null,
+                    forwardTonAmount: 1,
+                    forwardPayload: beginCell().storeUint(0, 1).endCell().beginParse(), // TODO: THIS IS BAD FOR GAS OMG IDK HOW TO FIX IT IN TACT
+                }.toCell(),
+            });
+
+            self.status = OrderStatusClosed;
             return;
         }
+
+        nativeThrow(911);
     }
 
     get fun orderData(): OrderData {
