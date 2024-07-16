@@ -40,9 +40,9 @@
     int price = in_msg_body~load_uint(64);
     int expiration_time_t = in_msg_body~load_uint(64);
 
-    throw_unless_toncoins_excesses(915, ton_amount ^% price == 0, sender_address, ton_amount + fwd_fee + fee::jetton::consumption());
+    throw_unless_toncoins_excesses(915, (ton_amount * NORM_FACTOR) ^% price == 0, sender_address, ton_amount + fwd_fee + fee::jetton::consumption());
 
-    int quantity = ton_amount / price;
+    int quantity = (ton_amount * NORM_FACTOR) / price;
 
     ;; reserve tons for storage and current computations
     int ton_balance_before_msg = my_ton_balance - msg_value;
@@ -231,7 +231,7 @@
     slice from_address = in_msg_body~load_msg_addr(); ;; jetton's owner address - order creator
 
     var (owner_address, order_id, order_code, jetton_wallet_code, ton_order_code) = load_data();
-    
+
     slice payload = in_msg_body~unpack_forward_payload();
     payload~skip_bits(32); ;; skip inner op-code
     slice jetton_master_address = payload~load_msg_addr();

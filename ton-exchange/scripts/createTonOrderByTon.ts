@@ -14,7 +14,7 @@ export async function run(provider: NetworkProvider) {
     OrderDeployer.createFromAddress(orderDeployerAddress)
   );
 
-  const price = 1;
+  const price = 10e9;
   await orderDeployer.sendCreateTonOrder(provider.sender(), {
     queryId: 9,
     value: toNano(1),

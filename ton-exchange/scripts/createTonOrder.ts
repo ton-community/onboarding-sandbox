@@ -17,7 +17,7 @@ export async function run(provider: NetworkProvider) {
     JettonWallet.createFromAddress(jettonWalletAddress)
   );
 
-  const price = 1;
+  const price = 10e9;
   await jettonWallet.sendTransfer(provider.sender(), {
     value: toNano(1),
     fwdAmount: toNano(0.7),

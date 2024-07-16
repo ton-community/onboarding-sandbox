@@ -7,6 +7,8 @@ import {JettonMinter} from '../wrappers/JettonMinter';
 import {TonOrder} from '../wrappers/TonOrder';
 import {OrderDeployer} from '../wrappers/OrderDeployer';
 
+const NORM_FACTOR = 10 ** 9;
+
 describe('OrderDeployer.TonOrder', () => {
   let orderDeployerCode;
   let orderCode: Cell;
@@ -109,7 +111,7 @@ describe('OrderDeployer.TonOrder', () => {
   });
 
   it('should create order by jetton', async () => {
-    const price = 10;
+    const price = 10 * NORM_FACTOR;
     const expirationTime = Math.ceil(Date.now() / 1000) + 1000;
 
     const result = await sellerJettonWallet.sendTransfer(seller.getSender(), {
@@ -123,7 +125,7 @@ describe('OrderDeployer.TonOrder', () => {
         .storeAddress(jettonMinter.address)
         .storeUint(price, 64)
         .storeUint(expirationTime, 64)
-        .endCell()
+        .endCell(),
     });
 
     const {address: newOrderAddress} = await orderDeployer.getOrderAddress(
@@ -155,12 +157,12 @@ describe('OrderDeployer.TonOrder', () => {
 
     expect(orderData.status).toEqual(2);
     expect(orderData.price).toEqual(price);
-    expect(orderData.total_amount).toEqual(Number(jettonAmount));
+    expect(orderData.quantity).toEqual(Number(jettonAmount));
     expect(orderData.expirationTime).toEqual(expirationTime);
   });
 
   it('should create order ton', async () => {
-    const price = 1000;
+    const price = 1000 * NORM_FACTOR;
     const expirationTime = Math.ceil(Date.now() / 1000) + 1000;
     const tonAmount = toNano(1n);
 
@@ -192,7 +194,9 @@ describe('OrderDeployer.TonOrder', () => {
 
     expect(orderData.status).toEqual(2);
     expect(orderData.price).toEqual(price);
-    expect(orderData.total_amount).toEqual(Number(tonAmount) / price);
+    expect(orderData.quantity).toEqual(
+      Number(tonAmount) / (price / NORM_FACTOR)
+    );
     expect(orderData.expirationTime).toEqual(expirationTime);
   });
 });

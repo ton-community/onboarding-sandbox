@@ -25,15 +25,19 @@ export type TonOrderConfig = {
 };
 
 function tonOrderConfigToCell(config: TonOrderConfig): Cell {
-  return beginCell()
-    .storeUint(config.status, 3)
-    .storeUint(config.side, 1)
-    .storeUint(config.quantity, 64)
-    .storeUint(config.price, 64)
-    .storeUint(config.orderId, 32)
+  const addressesCell = beginCell()
     .storeAddress(config.deployerAddress)
     .storeAddress(config.jettonMasterAddress)
     .storeAddress(config.creatorAddress)
+    .endCell();
+
+  return beginCell()
+    .storeUint(config.status, 3)
+    .storeUint(config.side, 1)
+    .storeCoins(config.quantity)
+    .storeUint(config.price, 64)
+    .storeUint(config.orderId, 32)
+    .storeRef(addressesCell)
     .storeRef(config.orderCode)
     .storeRef(config.jettonWalletCode)
     .storeUint(config.expirationTime, 64)
@@ -77,7 +81,7 @@ export class TonOrder implements Contract {
         .storeUint(0x26de17e3, 32)
         .storeUint(opts.queryId, 64)
         .storeUint(opts.side, 1)
-        .storeUint(opts.quantity, 64)
+        .storeCoins(opts.quantity)
         .storeUint(opts.price, 64)
         .storeAddress(opts.jettonMasterAddress)
         .storeAddress(opts.creatorAddress)
@@ -94,7 +98,6 @@ export class TonOrder implements Contract {
       queryId: number;
     }
   ) {
-
     const body = beginCell()
       .storeUint(0x26de17e4, 32)
       .storeUint(opts.queryId, 64)
@@ -114,7 +117,7 @@ export class TonOrder implements Contract {
 
     const status = stack.readNumber();
     const side = stack.readNumber();
-    const total_amount = stack.readNumber();
+    const quantity = stack.readNumber();
     const price = stack.readNumber();
     const orderId = stack.readNumber();
     const deployerAddress = stack.readAddressOpt();
@@ -127,7 +130,7 @@ export class TonOrder implements Contract {
     return {
       status,
       side,
-      total_amount,
+      quantity,
       price,
       orderId,
       deployerAddress,

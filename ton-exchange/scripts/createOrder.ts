@@ -23,7 +23,7 @@ export async function run(provider: NetworkProvider) {
     JettonWallet.createFromAddress(jettonWalletAddress)
   );
 
-  const price = 1;
+  const price = 10e9;
   const side = 0;
   const queryId = 7;
 
