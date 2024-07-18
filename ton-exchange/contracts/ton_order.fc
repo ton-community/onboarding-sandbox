@@ -117,7 +117,6 @@
     slice order_jetton_wallet_address = calculate_jetton_wallet_address(jetton_wallet_state_init);
 
     send_ton(query_id, from_address, ton_amount);
-    msg_value -= ton_amount;
 
     send_tokens(query_id, quantity, creator_address, order_jetton_wallet_address, from_address, msg_value, fwd_fee + fee::jetton::consumption() + fee::tons_for_storage());
 
