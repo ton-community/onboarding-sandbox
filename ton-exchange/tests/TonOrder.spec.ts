@@ -1,10 +1,12 @@
-import {Blockchain, SandboxContract, TreasuryContract, printTransactionFees} from '@ton/sandbox';
+import {Blockchain, SandboxContract, TreasuryContract} from '@ton/sandbox';
 import {beginCell, Cell, toNano} from '@ton/core';
 import '@ton/test-utils';
 import {compile} from '@ton/blueprint';
 import {JettonWallet} from '../wrappers/JettonWallet';
 import {JettonMinter} from '../wrappers/JettonMinter';
 import {TonOrder} from '../wrappers/TonOrder';
+
+const NORM_FACTOR = 10 ** 9;
 
 describe('TonOrder', () => {
   let orderCode: Cell;
@@ -98,9 +100,9 @@ describe('TonOrder', () => {
   it('should deploy', async () => {
     const expirationTime = Math.ceil(Date.now() / 1000) + 1000;
     const side = 0;
-    const price = 10;
+    const price = 1.5 * NORM_FACTOR;
 
-    await order.sendDeploy(deployer.getSender(), toNano(1), {
+    const result = await order.sendDeploy(deployer.getSender(), toNano(1), {
       side,
       queryId: 9,
       expirationTime,
@@ -108,6 +110,13 @@ describe('TonOrder', () => {
       quantity: Number(jettonAmount),
       jettonMasterAddress: jettonMinter.address,
       creatorAddress: seller.address,
+    });
+
+    expect(result.transactions).toHaveTransaction({
+      from: deployer.address,
+      to: order.address,
+      deploy: true,
+      success: true,
     });
 
     const orderData = await order.getOrderData();
@@ -130,7 +139,7 @@ describe('TonOrder', () => {
   });
 
   it('should close', async () => {
-    const result = await order.sendClose(seller.getSender(), {
+    await order.sendClose(seller.getSender(), {
       value: toNano(1),
       queryId: 9,
     });

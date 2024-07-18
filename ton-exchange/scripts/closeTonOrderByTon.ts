@@ -4,9 +4,9 @@ import {TonOrder} from '../wrappers/TonOrder';
 
 export async function run(provider: NetworkProvider) {
   const orderAddress = Address.parse(
-    'kQD56u5-_i2ORW6QD3AIKyraZhqPL0KNaAaZ31ba2mDe9H6w'
+    'kQDs5_rY6v7IvQk8zRYg4_a62zLz9Fww35pxZq5cyal6GXw-'
   );
 
   const order = provider.open(TonOrder.createFromAddress(orderAddress));
-  await order.sendClose(provider.sender(), {value: toNano(1.3), queryId: 9});
+  await order.sendClose(provider.sender(), {value: toNano(10.3), queryId: 9});
 }

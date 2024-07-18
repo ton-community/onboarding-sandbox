@@ -37,7 +37,7 @@ function orderConfigToCell(config: OrderConfig): Cell {
     )
     .storeUint(config.side, 1)
     .storeUint(config.quantity, 64)
-    .storeUint(config.price, 32)
+    .storeUint(config.price, 64)
     .storeUint(config.orderId, 32)
     .storeAddress(config.deployerAddress)
     .storeAddress(config.creatorAddress)
@@ -94,7 +94,7 @@ export class Order implements Contract {
     const baseWalletAddress = stack.readAddressOpt();
     const quoteWalletAddress = stack.readAddressOpt();
     const side = stack.readNumber();
-    const quantity = stack.readNumber();
+    const total_amount = stack.readBigNumber();
     const price = stack.readNumber();
     const orderId = stack.readNumber();
     const deployerAddress = stack.readAddressOpt();
@@ -109,7 +109,7 @@ export class Order implements Contract {
       baseWalletAddress,
       quoteWalletAddress,
       side,
-      quantity,
+      total_amount,
       price,
       orderId,
       deployerAddress,

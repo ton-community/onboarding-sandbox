@@ -1,15 +1,19 @@
 #include "../stdlib.fc";
 
 cell pack_ton_order_data(int status, int side, int quantity, int price, int order_id, slice deployer_address, slice creator_address, slice jetton_master_addres, cell order_code, cell jetton_wallet_code, int expiration_time_t) inline {
-    return begin_cell()
-        .store_uint(status, 3)
-        .store_uint(side, 1)
-        .store_uint(quantity, 64)
-        .store_uint(price, 32)
-        .store_uint(order_id, 32)
+    var addresses_cell = begin_cell()
         .store_slice(deployer_address)
         .store_slice(creator_address)
         .store_slice(jetton_master_addres)
+        .end_cell();
+
+    return begin_cell()
+        .store_uint(status, 3)
+        .store_uint(side, 1)
+        .store_coins(quantity)
+        .store_uint(price, 64)
+        .store_uint(order_id, 32)
+        .store_ref(addresses_cell)
         .store_ref(order_code)
         .store_ref(jetton_wallet_code)
         .store_uint(expiration_time_t, 64)

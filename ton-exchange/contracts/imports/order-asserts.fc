@@ -3,7 +3,7 @@
 #include "out-log.fc";
 
 (int) check_if_fill_order_payload_invalid(slice either_forward_payload) impure inline {
-    return slice_bits(either_forward_payload) != 267 + 267 + 1 + 32 + 64; ;; order_creation_type, base, quote, side, price, expiration_time_t
+    return slice_bits(either_forward_payload) != 267 + 267 + 1 + 64 + 64; ;; base addr, quote addr, side, price, expiration_time_t
 }
 
 

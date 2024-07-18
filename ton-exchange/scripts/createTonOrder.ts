@@ -1,11 +1,9 @@
 import {Address, beginCell, toNano} from '@ton/core';
 import {NetworkProvider} from '@ton/blueprint';
 import {JettonWallet} from '../wrappers/JettonWallet';
+import {ORDER_DEPLOYER_ADDRESS} from './index';
 
 export async function run(provider: NetworkProvider) {
-  const orderDeployerAddress = Address.parse(
-    'EQBuObr2M7glm08w6cBGjIuuCbmvBFGwuVs6qb3AQpac9Xpf'
-  );
   const jettonWalletAddress = Address.parse(
     'kQA8Q7m_pSNPr6FcqRYxllpAZv-0ieXy_KYER2iP195hBXiU'
   );
@@ -17,17 +15,17 @@ export async function run(provider: NetworkProvider) {
     JettonWallet.createFromAddress(jettonWalletAddress)
   );
 
-  const price = 1;
+  const price = 1e9;
   await jettonWallet.sendTransfer(provider.sender(), {
     value: toNano(1),
     fwdAmount: toNano(0.7),
     queryId: 9,
     jettonAmount: toNano(1n),
-    toAddress: orderDeployerAddress,
+    toAddress: ORDER_DEPLOYER_ADDRESS,
     forwardPayload: beginCell()
       .storeUint(0x26de15e2, 32)
       .storeAddress(jettonWalletMasterAddress)
-      .storeUint(price, 32)
+      .storeUint(price, 64)
       .storeUint(Math.ceil(Date.now() / 1000) + 1000, 64)
       .endCell(),
   });

@@ -4,6 +4,9 @@ const create_order_comission_percent = 15;
 const order_type::JETTON = 0;
 const order_type::TON = 1;
 
+const swap::TON_JETTON = 0;
+const swap::JETTON_TON = 1;
+
 const side::SELLER = 0;
 const side::BUYER = 1;
 
@@ -12,3 +15,5 @@ const status::INITIALIZED = 1;
 const status::FILLED = 2;
 const status::CLOSED = 3;
 const status::EXPIRED = 4;
+
+const NORM_FACTOR = 1000000000; ;; 10^9
