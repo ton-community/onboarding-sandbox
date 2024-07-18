@@ -77,10 +77,10 @@ describe('OrderDeployer.TonOrder', () => {
     await jettonMinter.sendDeploy(deployer.getSender(), toNano(0.25));
 
     await jettonMinter.sendMint(deployer.getSender(), {
-      jettonAmount,
+      jettonAmount: toNano(3),
       queryId: 9,
       toAddress: seller.address,
-      amount: toNano(1),
+      amount: toNano(2),
       value: toNano(2),
     });
 
@@ -162,12 +162,12 @@ describe('OrderDeployer.TonOrder', () => {
   });
 
   it('should create order ton', async () => {
-    const price = 1000 * NORM_FACTOR;
-    const expirationTime = Math.ceil(Date.now() / 1000) + 1000;
-    const tonAmount = toNano(1n);
+    const price = 0x9502f900;
+    const expirationTime = 0;
+    const tonAmount = toNano(5n);
 
     const result = await orderDeployer.sendCreateTonOrder(buyer.getSender(), {
-      value: toNano(2),
+      value: toNano(5.5),
       queryId: 9,
       tonAmount,
       expirationTime,
@@ -198,5 +198,21 @@ describe('OrderDeployer.TonOrder', () => {
       Number(tonAmount) / (price / NORM_FACTOR)
     );
     expect(orderData.expirationTime).toEqual(expirationTime);
+  });
+
+  it('should close order by jetton', async () => {
+    const result = await sellerJettonWallet.sendTransfer(seller.getSender(), {
+      value: toNano(1),
+      fwdAmount: toNano(0.7),
+      queryId: 9,
+      jettonAmount: toNano(2),
+      toAddress: order.address,
+    });
+
+    expect(result.transactions).toHaveTransaction({
+      from: order.address,
+      to: buyer.address,
+      success: true,
+    });
   });
 });
