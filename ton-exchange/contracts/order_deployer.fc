@@ -40,8 +40,6 @@
     int price = in_msg_body~load_uint(64);
     int expiration_time_t = in_msg_body~load_uint(64);
 
-    throw_unless_toncoins_excesses(915, (ton_amount * NORM_FACTOR) ^% price == 0, sender_address, ton_amount + fwd_fee + fee::jetton::consumption());
-
     int quantity = (ton_amount * NORM_FACTOR) / price;
 
     ;; reserve tons for storage and current computations
