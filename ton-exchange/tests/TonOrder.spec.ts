@@ -177,6 +177,6 @@ describe('TonOrder', () => {
     });
 
     const orderData = await order.getOrderData();
-    expect(orderData.status).toEqual(4);
+    expect(orderData.status).toEqual(5);
   });
 });
