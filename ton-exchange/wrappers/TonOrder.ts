@@ -112,6 +112,25 @@ export class TonOrder implements Contract {
     });
   }
 
+  async sendRecall(
+    provider: ContractProvider,
+    via: Sender,
+    opts: {
+      value: bigint | string;
+      queryId: number;
+    }
+  ) {
+    const body = beginCell()
+      .storeUint(0x26de17e5n, 32)
+      .storeUint(opts.queryId, 64)
+      .endCell();
+
+    await provider.internal(via, {
+      value: opts.value,
+      sendMode: SendMode.PAY_GAS_SEPARATELY,
+      body: body,
+    });
+  }
   async getOrderData(provider: ContractProvider) {
     const {stack} = await provider.get('get_order_data', []);
 

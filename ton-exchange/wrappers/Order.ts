@@ -87,6 +87,26 @@ export class Order implements Contract {
     });
   }
 
+  async sendRecall(
+    provider: ContractProvider,
+    via: Sender,
+    value: bigint,
+    {
+      queryId,
+    }: {
+      queryId: number;
+    } = {queryId: 0}
+  ) {
+    await provider.internal(via, {
+      value,
+      sendMode: SendMode.PAY_GAS_SEPARATELY,
+      body: beginCell()
+        .storeUint(0x84302c25n, 32)
+        .storeUint(queryId, 64)
+        .endCell(),
+    });
+  }
+
   async getOrderData(provider: ContractProvider) {
     const {stack} = await provider.get('get_order_data', []);
 
@@ -94,7 +114,7 @@ export class Order implements Contract {
     const baseWalletAddress = stack.readAddressOpt();
     const quoteWalletAddress = stack.readAddressOpt();
     const side = stack.readNumber();
-    const total_amount = stack.readBigNumber();
+    const totalAmount = stack.readBigNumber();
     const price = stack.readNumber();
     const orderId = stack.readNumber();
     const deployerAddress = stack.readAddressOpt();
@@ -109,7 +129,7 @@ export class Order implements Contract {
       baseWalletAddress,
       quoteWalletAddress,
       side,
-      total_amount,
+      totalAmount,
       price,
       orderId,
       deployerAddress,

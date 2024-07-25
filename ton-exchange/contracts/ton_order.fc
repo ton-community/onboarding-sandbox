@@ -51,7 +51,7 @@
     send_raw_message(msg.end_cell(), 0);
 }
 
-() send_ton(int query_id, slice to_address, int ton_amount) impure inline {
+() send_ton_mode(int query_id, slice to_address, int ton_amount, int mode) impure inline {
     var mgs_body = begin_cell()
         .store_uint(0, 32)
         .store_uint(query_id, 64)
@@ -64,7 +64,11 @@
         .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
         .store_ref(mgs_body);
 
-    send_raw_message(msg.end_cell(), 0);
+    send_raw_message(msg.end_cell(), mode);
+}
+
+() send_ton(int query_id, slice to_address, int ton_amount) impure inline {
+    send_ton_mode(query_id, to_address, ton_amount, 0);
 }
 
 
@@ -90,6 +94,27 @@
     } else {
         save_data(status::FILLED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
     }
+}
+
+() recall_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee) impure inline {
+    throw_unless(2114, slice_bits(in_msg_body) == 64);
+    int query_id = in_msg_body~load_uint(64);
+
+    var (status, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t) = load_data();
+
+    throw_unless(2115, equal_slices(creator_address, sender_address));
+    throw_unless(2116, status == status::FILLED);
+
+    ~dump(side);
+
+    if (side == side::SELLER) {
+        send_ton_mode(query_id, creator_address, 0, 128);
+    } else {
+        var jetton_wallet_addres = calculate_user_jetton_wallet_address(my_address(), jetton_master_address, jetton_wallet_code);
+        send_jettons_with_mode(query_id, quantity, creator_address, jetton_wallet_addres, creator_address, 0, 10000000, 128);
+    }
+
+    save_data(status::RECALLED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
 }
 
 () close_order(slice in_msg_body, slice sender_address, int msg_value, int fwd_fee, int my_ton_balance) impure inline {
@@ -213,6 +238,11 @@
         return ();
     }
 
+    if (op == op::recall_ton_order()) {
+        recall_order(in_msg_body, sender_address, msg_value, fwd_fee);
+        return ();
+    }
+
     if (op == op::close_ton_order()) {
         close_order_by_ton(in_msg_body, sender_address, msg_value, fwd_fee, my_balance);
         return ();
@@ -247,7 +277,13 @@
 
     accept_message();
 
-    ;; TODO this
+    if (side == side::SELLER) {
+        send_ton_mode(0, creator_address, 0, 128);
+    } else {
+        var jetton_wallet_addres = calculate_user_jetton_wallet_address(my_address(), jetton_master_address, jetton_wallet_code);
+        send_jettons_with_mode(0, quantity, creator_address, jetton_wallet_addres, creator_address, 0, 10000000, 128);
+    }
+
 
     save_data(status::EXPIRED, side, quantity, price, order_id, deployer_address, creator_address, jetton_master_address, order_code, jetton_wallet_code, expiration_time_t);
 }

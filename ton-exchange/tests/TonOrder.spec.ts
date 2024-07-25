@@ -1,4 +1,9 @@
-import {Blockchain, SandboxContract, TreasuryContract} from '@ton/sandbox';
+import {
+  Blockchain,
+  BlockchainSnapshot,
+  SandboxContract,
+  TreasuryContract,
+} from '@ton/sandbox';
 import {beginCell, Cell, toNano} from '@ton/core';
 import '@ton/test-utils';
 import {compile} from '@ton/blueprint';
@@ -125,6 +130,7 @@ describe('TonOrder', () => {
     expect(orderData.creatorAddress).toEqualAddress(seller.address);
   });
 
+  let initializedSnapshot: BlockchainSnapshot;
   it('should initialize', async () => {
     await deployerJettonWallet.sendTransfer(deployer.getSender(), {
       queryId: 9,
@@ -136,6 +142,8 @@ describe('TonOrder', () => {
 
     const orderData = await order.getOrderData();
     expect(orderData.status).toEqual(2);
+
+    initializedSnapshot = blockchain.snapshot();
   });
 
   it('should close', async () => {
@@ -152,5 +160,23 @@ describe('TonOrder', () => {
 
     const sellerJettonAmount = await sellerJettonWallet.getWalletJettonAmount();
     expect(sellerJettonAmount).toEqual(jettonAmount);
+  });
+
+  it('should recall close', async () => {
+    await blockchain.loadFrom(initializedSnapshot);
+
+    const res = await order.sendRecall(seller.getSender(), {
+      value: toNano(1),
+      queryId: 9,
+    });
+
+    expect(res.transactions).toHaveTransaction({
+      from: order.address,
+      to: seller.address,
+      success: true,
+    });
+
+    const orderData = await order.getOrderData();
+    expect(orderData.status).toEqual(4);
   });
 });

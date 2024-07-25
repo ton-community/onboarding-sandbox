@@ -8,7 +8,8 @@ int fee::order::create_consumption() asm "30000000 PUSHINT"; ;; 0.03 TON
 int fee::order::fill_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
 int fee::order::close_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
 
-() send_jettons(int query_id, int amount, slice to_address, slice from_address, slice excesses_address, int msg_value, int forward_payload_value) impure inline {
+
+() send_jettons_with_mode(int query_id, int amount, slice to_address, slice from_address, slice excesses_address, int msg_value, int forward_payload_value, int send_mode) impure inline {
     var msg_body = begin_cell()
         .store_uint(op::transfer(), 32)
         .store_uint(query_id, 64)
@@ -26,7 +27,11 @@ int fee::order::close_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
         .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
         .store_ref(msg_body.end_cell());
 
-    send_raw_message(msg.end_cell(), 2);
+    send_raw_message(msg.end_cell(), send_mode);
+}
+
+() send_jettons(int query_id, int amount, slice to_address, slice from_address, slice excesses_address, int msg_value, int forward_payload_value) impure inline {
+    send_jettons_with_mode(query_id, amount, to_address, from_address, excesses_address, msg_value, forward_payload_value, 2);
 }
 
 () send_toncoins(slice to_address, int msg_value) impure inline {
@@ -65,7 +70,7 @@ int fee::order::close_consumption() asm "10000000 PUSHINT"; ;; 0.01 TON
     cell payload_cell = in_msg_body~load_maybe_ref();
     if (cell_null?(payload_cell) == 0) {
         return (in_msg_body, payload_cell.begin_parse());
-    } 
+    }
 
     return (in_msg_body, in_msg_body);
 }
