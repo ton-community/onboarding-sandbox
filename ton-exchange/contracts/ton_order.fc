@@ -105,9 +105,7 @@
     throw_unless(2115, equal_slices(creator_address, sender_address));
     throw_unless(2116, status == status::FILLED);
 
-    ~dump(side);
-
-    if (side == side::SELLER) {
+    if (side == side::BUYER) {
         send_ton_mode(query_id, creator_address, 0, 128);
     } else {
         var jetton_wallet_addres = calculate_user_jetton_wallet_address(my_address(), jetton_master_address, jetton_wallet_code);
@@ -277,7 +275,7 @@
 
     accept_message();
 
-    if (side == side::SELLER) {
+    if (side == side::BUYER) {
         send_ton_mode(0, creator_address, 0, 128);
     } else {
         var jetton_wallet_addres = calculate_user_jetton_wallet_address(my_address(), jetton_master_address, jetton_wallet_code);
