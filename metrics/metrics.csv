@@ -1,5 +1,5 @@
 name,description,value,type,default_value
-max_size,maximum external message size in bits,65535,uint32,65535
+max_size,maximum external message size in bytes,65535,uint32,65535
 max_depth,maximum external message depth,512,uint16,512
 max_msg_bits,maximum message size in bits,2097152,uint32,2097152
 max_msg_cells,maximum number of cells (a form of storage unit) a message can occupy,8192,uint32,8192
