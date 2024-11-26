@@ -3,7 +3,7 @@ max_size,maximum external message size in bytes,65535,uint32,65535
 max_depth,maximum external message depth,512,uint16,512
 max_msg_bits,maximum message size in bits,2097152,uint32,2097152
 max_msg_cells,maximum number of cells (a form of storage unit) a message can occupy,8192,uint32,8192
-max_vm_data_depth,maximum cell depth in messages and account state. maximum amount of actions,512,uint16,512
+max_vm_data_depth,maximum cell depth in messages and c4 & c5 registers,512,uint16,512
 max_library_cells,maximum number of library cells in library,1000,uint32,1000
 max_acc_state_cells,maximum number of cells that an account state can occupy,65536,uint32,65536
 max_acc_state_bits,maximum account state size in bits,67043328,uint32,67043328
@@ -18,7 +18,7 @@ gas_limit,maximum amount of gas that can be consumed per transaction,1000000,uin
 gas_credit,credit in gas units that is provided to transactions for the purpose of checking an external message,10000,uint64,0
 block_gas_limit,maximum amount of gas that can be consumed within a single block,10000000,uint64,0
 freeze_due_limit,accumulated storage fees (in nanoTON) at which a contract is frozen,100000000,uint64,0
-delete_due_limit,accumulated storage fees (in nanoTON) at which a contract is frozen,1000000000,uint64,0
+delete_due_limit,accumulated storage fees (in nanoTON) at which a contract is deleted,1000000000,uint64,0
 mc_flat_gas_limit,gas below flat_gas_limit is provided at price of flat_gas_price on masterchain,100,uint64,0
 mc_flat_gas_price,costs of launching the TON Virtual Machine on masterchain,1000000,uint64,0
 mc_gas_price,price of gas in the network in nanotons per 65536 gas units on masterchain,655360000,uint64,0
@@ -27,7 +27,7 @@ mc_gas_limit,maximum amount of gas that can be consumed per transaction on maste
 mc_gas_credit,credit in gas units that is provided to transactions for the purpose of checking an external message on masterchain,10000,uint64,0
 mc_block_gas_limit,maximum amount of gas that can be consumed within a single block on masterchain,2500000,uint64,0
 mc_freeze_due_limit,accumulated storage fees (in nanoTON) at which a contract is frozen on masterchain,100000000,uint64,0
-mc_delete_due_limit,accumulated storage fees (in nanoTON) at which a contract is frozen on masterchain,1000000000,uint64,0
+mc_delete_due_limit,accumulated storage fees (in nanoTON) at which a contract is deleted on masterchain,1000000000,uint64,0
 bytes_underload,limit on the block size in bytes. state when the shard realizes that there is no load and is inclined to merge,131072,uint32,0
 bytes_soft_limit,limit on the block size in bytes. when this limit is reached internal messages stop being processed,524288,uint32,0
 bytes_hard_limit,absolute maximum bytes size of block,1048576,uint32,0
