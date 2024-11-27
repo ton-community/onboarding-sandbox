@@ -4,6 +4,7 @@ max_depth,maximum external message depth,512,uint16,512
 max_msg_bits,maximum message size in bits,2097152,uint32,2097152
 max_msg_cells,maximum number of cells (a form of storage unit) a message can occupy,8192,uint32,8192
 max_vm_data_depth,maximum cell depth in messages and c4 & c5 registers,512,uint16,512
+max_actions,maximum amount of actions,256,uint32,256
 max_library_cells,maximum number of library cells in library,1000,uint32,1000
 max_acc_state_cells,maximum number of cells that an account state can occupy,65536,uint32,65536
 max_acc_state_bits,maximum account state size in bits,67043328,uint32,67043328
