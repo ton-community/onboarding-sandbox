@@ -8,25 +8,23 @@ const op::increase = "op::increase"c; ;; create an opcode from string using the 
 ;; since addresses in TON depend on the initial state of the contract
 
 ;; load_data populates storage variables using stored data
-(int, int, int, int) load_data() {
+(int, int, int) load_data() {
     var ds = get_data().begin_parse();
 
     int ctx_id = ds~load_uint(32);
-    int ctx_counter = ds~load_uint(32);
     int seqno = ds~load_uint(32);
     int public_key = ds~load_uint(256);
 
     ds.end_parse();
 
-    return (ctx_id, ctx_counter, seqno, public_key);
+    return (ctx_id, seqno, public_key);
 }
 
 ;; save_data stores storage variables as a cell into persistent storage
-() save_data(int ctx_id, int ctx_counter, int seqno, int public_key) impure {
+() save_data(int ctx_id, int seqno, int public_key) impure {
     set_data(
         begin_cell()
             .store_uint(ctx_id, 32)
-            .store_uint(ctx_counter, 32)
             .store_uint(seqno, 32)
             .store_uint(public_key, 256)
         .end_cell()
@@ -45,19 +43,41 @@ const op::increase = "op::increase"c; ;; create an opcode from string using the 
         return ();
     }
 
-    var (ctx_id, ctx_counter, seqno, public_key) = load_data(); ;; here we populate the storage variables
+    var (ctx_id, seqno, public_key) = load_data(); ;; here we populate the storage variables
 
     int op = in_msg_body~load_uint(32); ;; by convention, the first 32 bits of incoming message is the op
     int query_id = in_msg_body~load_uint(64); ;; also by convention, the next 64 bits contain the "query id", although this is not always the case
 
     if (op == op::increase) {
         int increase_by = in_msg_body~load_uint(32);
-        ctx_counter += increase_by;
-        save_data(ctx_id, ctx_counter, seqno, public_key);
+        seqno += increase_by;
+        save_data(ctx_id, seqno, public_key);
         return ();
     }
 
     throw(0xffff); ;; if the message contains an op that is not known to this contract, we throw
+}
+
+() recv_external(slice in_msg) impure {
+    var signature = in_msg~load_bits(512);
+    var cs = in_msg;
+    var (ctx_id, msg_seqno) = (cs~load_uint(32), cs~load_uint(32));
+
+    var (stored_id, stored_seqno, public_key) = load_data();
+    throw_unless(33, msg_seqno == stored_seqno);
+    throw_unless(34, ctx_id == stored_id);
+    throw_unless(35, check_signature(slice_hash(in_msg), signature, public_key));
+    accept_message();
+    cs~touch();
+    while (cs.slice_refs()) {
+        var mode = cs~load_uint(8);
+        send_raw_message(cs~load_ref(), mode);
+    }
+    set_data(begin_cell()
+        .store_uint(stored_id, 32)
+        .store_uint(stored_seqno + 1, 32)
+        .store_uint(public_key, 256)
+    .end_cell());
 }
 
 ;; get methods are a means to conveniently read contract data using, for example, HTTP APIs
@@ -65,16 +85,16 @@ const op::increase = "op::increase"c; ;; create an opcode from string using the 
 ;; note that unlike in many other smart contract VMs, get methods cannot be called by other contracts
 
 int get_counter() method_id {
-    var (ctx_id, ctx_counter, seqno, public_key) = load_data();
-    return ctx_counter;
+    var (_, seqno, _) = load_data();
+    return seqno;
 }
 
 int get_id() method_id {
-    var (ctx_id, ctx_counter, seqno, public_key) = load_data();
+    var (ctx_id, _, _) = load_data();
     return ctx_id;
 }
 
 (int, int) get_seqno_public_key() method_id {
-    var (_, _, seqno, public_key) = load_data();
+    var (_, seqno, public_key) = load_data();
     return (seqno, public_key);
 }

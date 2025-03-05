@@ -1,8 +1,9 @@
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
-import { Cell, toNano } from '@ton/core';
+import { Address, Cell, toNano, beginCell, SendMode } from '@ton/core';
 import { HelloWorld } from '../wrappers/HelloWorld';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
+import { KeyPair, getSecureRandomBytes, keyPairFromSeed } from '@ton/crypto';
 
 describe('HelloWorld', () => {
     let code: Cell;
@@ -14,17 +15,21 @@ describe('HelloWorld', () => {
     let blockchain: Blockchain;
     let deployer: SandboxContract<TreasuryContract>;
     let helloWorld: SandboxContract<HelloWorld>;
+    let keyPair: KeyPair;
 
     beforeEach(async () => {
         blockchain = await Blockchain.create();
-
+        
+        // Generate a key pair for signing external messages
+        const seed = await getSecureRandomBytes(32);
+        keyPair = keyPairFromSeed(seed);
+        
         helloWorld = blockchain.openContract(
             HelloWorld.createFromConfig(
                 {
                     id: 0,
-                    counter: 0,
                     seqno: 0,
-                    public_key: 0n
+                    public_key: keyPair.publicKey
                 },
                 code
             )
@@ -87,7 +92,7 @@ describe('HelloWorld', () => {
             id: 0,
             counter: 0,
             seqno: 0,
-            public_key: 0n
+            public_key: keyPair.publicKey
         };
 
         // Log the initial configuration values before verification
@@ -113,7 +118,52 @@ describe('HelloWorld', () => {
         console.log('- Seqno:', seqno);
         console.log('- Public Key:', publicKey.toString());
         expect(seqno).toBe(expectedConfig.seqno);
-        expect(publicKey).toBe(expectedConfig.public_key);
+        expect(publicKey).toEqual(expectedConfig.public_key);
+    });
+
+    it('should send an external message containing an internal message', async () => {
+        const receiver = await blockchain.treasury('receiver');
+        
+        const internalMessage = beginCell()
+            .storeUint(0, 32) // Simple message with no specific opcode
+            .storeUint(0, 64) // queryID = 0
+            .storeStringTail('Hello from external message!')
+            .endCell();
+        
+        const messageToSend = beginCell()
+            .storeUint(0x18, 6) // internal message info
+            .storeAddress(receiver.address) // destination address
+            .storeCoins(toNano('0.01')) // amount to send
+            .storeUint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1) // default message headers
+            .storeRef(internalMessage) // store the message content as a reference
+            .endCell();
+
+        const receiverBalanceBefore = await receiver.getBalance();
+
+        const result = await helloWorld.sendExternal({
+            mode: SendMode.PAY_GAS_SEPARATELY,
+            message: messageToSend,
+            secret_key: keyPair.secretKey
+        });
+
+        expect(result.transactions).toHaveTransaction({
+            from: undefined, // External messages have no 'from' address
+            to: helloWorld.address,
+            success: true,
+        });
+
+        expect(result.transactions).toHaveTransaction({
+            from: helloWorld.address,
+            to: receiver.address,
+            success: true,
+        });
+
+        const receiverBalanceAfter = await receiver.getBalance();
+
+        expect(receiverBalanceAfter).toBeGreaterThan(receiverBalanceBefore);
+        const [seqnoAfter] = await helloWorld.getSeqnoPKey();
+        expect(seqnoAfter).toBe(1); // Since it should start from 0 and increment to 1
     });
 });
+
 
