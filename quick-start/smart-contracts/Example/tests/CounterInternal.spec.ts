@@ -1,8 +1,10 @@
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
-import { Cell, toNano } from '@ton/core';
+import { Address, Cell, toNano, beginCell, SendMode } from '@ton/core';
 import { CounterInternal } from '../wrappers/CounterInternal';
+import { HelloWorld } from '../wrappers/HelloWorld';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
+import { KeyPair, getSecureRandomBytes, keyPairFromSeed } from '@ton/crypto';
 
 describe('CounterInternal', () => {
     let code: Cell;
@@ -18,17 +20,18 @@ describe('CounterInternal', () => {
     beforeEach(async () => {
         blockchain = await Blockchain.create();
 
+        deployer = await blockchain.treasury('deployer');
+
         counterInternal = blockchain.openContract(
             CounterInternal.createFromConfig(
                 {
                     id: 0,
                     counter: 0,
+                    owner: deployer.address,
                 },
                 code
             )
         );
-
-        deployer = await blockchain.treasury('deployer');
 
         const deployResult = await counterInternal.sendDeploy(deployer.getSender(), toNano('0.05'));
 
@@ -50,7 +53,6 @@ describe('CounterInternal', () => {
         for (let i = 0; i < increaseTimes; i++) {
             console.log(`increase ${i + 1}/${increaseTimes}`);
 
-            const increaser = await blockchain.treasury('increaser' + i);
 
             const counterBefore = await counterInternal.getCounter();
 
@@ -60,13 +62,13 @@ describe('CounterInternal', () => {
 
             console.log('increasing by', increaseBy);
 
-            const increaseResult = await counterInternal.sendIncrease(increaser.getSender(), {
+            const increaseResult = await counterInternal.sendIncrease(deployer.getSender(), {
                 increaseBy,
                 value: toNano('0.05'),
             });
 
             expect(increaseResult.transactions).toHaveTransaction({
-                from: increaser.address,
+                from: deployer.address,
                 to: counterInternal.address,
                 success: true,
             });
@@ -77,5 +79,155 @@ describe('CounterInternal', () => {
 
             expect(counterAfter).toBe(counterBefore + increaseBy);
         }
+    });
+    it('should retrieve correct values from get methods', async () => {
+        // Check initial counter value
+        const counter = await counterInternal.getCounter();
+        expect(counter).toBe(0);
+
+        // Check ID value
+        const id = await counterInternal.getID();
+        expect(id).toBe(0);
+
+        // Check owner address
+        const ownerAddress = await counterInternal.getOwnerAddress();
+        expect(ownerAddress.equals(deployer.address)).toBe(true);
+    });
+
+    describe('Integration with HelloWorld', () => {
+        let codeHelloWorld: Cell;
+        let codeCounterInternal: Cell;
+        let blockchain: Blockchain;
+        let helloWorld: SandboxContract<HelloWorld>;
+        let counterInternal: SandboxContract<CounterInternal>;
+        let keyPair: KeyPair;
+        
+        beforeAll(async () => {
+            codeHelloWorld = await compile('HelloWorld');
+            codeCounterInternal = await compile('CounterInternal');
+        });
+        
+        beforeEach(async () => {
+            blockchain = await Blockchain.create();
+            
+            // Generate a key pair for HelloWorld
+            const seed = await getSecureRandomBytes(32);
+            keyPair = keyPairFromSeed(seed);
+            
+            // Deploy HelloWorld contract
+            helloWorld = blockchain.openContract(
+                HelloWorld.createFromConfig(
+                    {
+                        id: 0,
+                        seqno: 0,
+                        public_key: keyPair.publicKey
+                    },
+                    codeHelloWorld
+                )
+            );
+            
+            const deployerHello = await blockchain.treasury('deployerHello');
+            const deployResultHello = await helloWorld.sendDeploy(deployerHello.getSender(), toNano('1.00'));
+            
+            expect(deployResultHello.transactions).toHaveTransaction({
+                from: deployerHello.address,
+                to: helloWorld.address,
+                deploy: true,
+                success: true,
+            });
+            
+            // Deploy CounterInternal with HelloWorld as the owner
+            counterInternal = blockchain.openContract(
+                CounterInternal.createFromConfig(
+                    {
+                        id: 0,
+                        counter: 0,
+                        owner: helloWorld.address, // Set HelloWorld as the owner
+                    },
+                    codeCounterInternal
+                )
+            );
+            
+            const deployerCounter = await blockchain.treasury('deployerCounter');
+            const deployResultCounter = await counterInternal.sendDeploy(deployerCounter.getSender(), toNano('1.00'));
+            
+            expect(deployResultCounter.transactions).toHaveTransaction({
+                from: deployerCounter.address,
+                to: counterInternal.address,
+                deploy: true,
+                success: true,
+            });
+        });
+        
+        it('should only allow owner to increment counter', async () => {
+            // Verify owner is correctly set to HelloWorld
+            const ownerAddress = await counterInternal.getOwnerAddress();
+            expect(ownerAddress.equals(helloWorld.address)).toBe(true);
+            
+            // Get initial counter value
+            const counterBefore = await counterInternal.getCounter();
+            
+            // Try to increase counter from a non-owner account (should fail)
+            const nonOwner = await blockchain.treasury('nonOwner');
+            const increaseBy = 5;
+            
+            const nonOwnerResult = await counterInternal.sendIncrease(nonOwner.getSender(), {
+                increaseBy,
+                value: toNano('0.05'),
+            });
+            
+            // This should fail since only the owner should be able to increment
+            expect(nonOwnerResult.transactions).toHaveTransaction({
+                from: nonOwner.address,
+                to: counterInternal.address,
+                success: false,
+                exitCode: 42, // The error code thrown in the contract
+            });
+            
+            // Counter should remain unchanged
+            const counterAfterNonOwner = await counterInternal.getCounter();
+            expect(counterAfterNonOwner).toBe(counterBefore);
+            
+            // Create internal message to increase counter that will be sent from HelloWorld
+            const internalMessageBody = beginCell()
+                .storeUint(0x7e8764ef, 32) // op::increase opcode
+                .storeUint(0, 64) // queryID = 0
+                .storeUint(increaseBy, 32) // increaseBy
+                .endCell();
+                
+            const messageToSend = beginCell()
+                .storeUint(0x18, 6) // internal message info
+                .storeAddress(counterInternal.address) // destination address
+                .storeCoins(toNano('0.10')) // amount to send
+                .storeUint(0, 1 + 4 + 4 + 64 + 32 + 1) // default message headers
+                .storeUint(1, 1)
+                .storeRef(internalMessageBody) // store the message content as a reference
+                .endCell();
+            
+            // Send external message to HelloWorld that contains internal message to CounterInternal
+            const result = await helloWorld.sendExternal({
+                mode: SendMode.PAY_GAS_SEPARATELY,
+                message: messageToSend,
+                secret_key: keyPair.secretKey
+            });
+            
+            // Verify the external message was processed successfully
+            expect(result.transactions).toHaveTransaction({
+                from: undefined, // External messages have no 'from' address
+                to: helloWorld.address,
+                success: true,
+            });
+            
+            // Verify the internal message was sent from HelloWorld to CounterInternal
+            expect(result.transactions).toHaveTransaction({
+                from: helloWorld.address,
+                to: counterInternal.address,
+                success: true,
+            });
+            
+            // Verify the counter was increased
+            const counterAfter = await counterInternal.getCounter();
+            expect(counterAfter).toBe(counterBefore + increaseBy);
+        });
     });
 });

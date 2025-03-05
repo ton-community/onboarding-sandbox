@@ -134,7 +134,8 @@ describe('HelloWorld', () => {
             .storeUint(0x18, 6) // internal message info
             .storeAddress(receiver.address) // destination address
             .storeCoins(toNano('0.01')) // amount to send
-            .storeUint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1) // default message headers
+            .storeUint(0, 1 + 4 + 4 + 64 + 32 + 1) // default message headers
+            .storeUint(1, 1)
             .storeRef(internalMessage) // store the message content as a reference
             .endCell();
 

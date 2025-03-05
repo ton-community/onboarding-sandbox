@@ -8,6 +8,7 @@ const op::increase = "op::increase"c; ;; create an opcode from string using the 
 ;; since addresses in TON depend on the initial state of the contract
 global int ctx_id;
 global int ctx_counter;
+global slice owner_address;
 
 ;; load_data populates storage variables using stored data
 () load_data() impure {
@@ -15,6 +16,7 @@ global int ctx_counter;
 
     ctx_id = ds~load_uint(32);
     ctx_counter = ds~load_uint(32);
+    owner_address = ds~load_msg_addr();
 
     ds.end_parse();
 }
@@ -25,7 +27,8 @@ global int ctx_counter;
         begin_cell()
             .store_uint(ctx_id, 32)
             .store_uint(ctx_counter, 32)
-            .end_cell()
+            .store_slice(owner_address)
+        .end_cell()
     );
 }
 
@@ -42,6 +45,11 @@ global int ctx_counter;
     }
 
     load_data(); ;; here we populate the storage variables
+    slice sender_addr = cs~load_msg_addr();
+    if (equal_slices_bits(sender_addr, owner_address) != -1) {
+        throw(42);
+    }
+
 
     int op = in_msg_body~load_uint(32); ;; by convention, the first 32 bits of incoming message is the op
     int query_id = in_msg_body~load_uint(64); ;; also by convention, the next 64 bits contain the "query id", although this is not always the case
@@ -68,4 +76,9 @@ int get_counter() method_id {
 int get_id() method_id {
     load_data();
     return ctx_id;
+}
+
+slice get_owner() method_id {
+    load_data();
+    return owner_address;
 }
