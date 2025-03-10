@@ -21,6 +21,7 @@ const op::increase = "op::increase"c; ;; create an opcode from string using the 
 }
 
 ;; save_data stores storage variables as a cell into persistent storage
+;; impure because of writing into TVM storage
 () save_data(int ctx_id, int seqno, int public_key) impure {
     set_data(
         begin_cell()

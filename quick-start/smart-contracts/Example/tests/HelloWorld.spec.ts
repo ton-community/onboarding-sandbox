@@ -1,5 +1,5 @@
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
-import { Address, Cell, toNano, beginCell, SendMode } from '@ton/core';
+import { Address, Cell, toNano, beginCell, SendMode, storeMessageRelaxed, internal } from '@ton/core';
 import { HelloWorld } from '../wrappers/HelloWorld';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
@@ -29,7 +29,7 @@ describe('HelloWorld', () => {
                 {
                     id: 0,
                     seqno: 0,
-                    public_key: keyPair.publicKey
+                    publicKey: keyPair.publicKey
                 },
                 code
             )
@@ -92,7 +92,7 @@ describe('HelloWorld', () => {
             id: 0,
             counter: 0,
             seqno: 0,
-            public_key: keyPair.publicKey
+            publicKey: keyPair.publicKey
         };
 
         // Log the initial configuration values before verification
@@ -100,7 +100,7 @@ describe('HelloWorld', () => {
         console.log('- ID:', expectedConfig.id);
         console.log('- Counter:', expectedConfig.counter);
         console.log('- Seqno:', expectedConfig.seqno);
-        console.log('- Public Key:', expectedConfig.public_key.toString());
+        console.log('- Public Key:', expectedConfig.publicKey.toString());
 
         console.log('Retrieved values after deployment:');
         // Verify counter value
@@ -118,7 +118,7 @@ describe('HelloWorld', () => {
         console.log('- Seqno:', seqno);
         console.log('- Public Key:', publicKey.toString());
         expect(seqno).toBe(expectedConfig.seqno);
-        expect(publicKey).toEqual(expectedConfig.public_key);
+        expect(publicKey).toEqual(expectedConfig.publicKey);
     });
 
     it('should send an external message containing an internal message', async () => {
@@ -130,14 +130,12 @@ describe('HelloWorld', () => {
             .storeStringTail('Hello from external message!')
             .endCell();
         
-        const messageToSend = beginCell()
-            .storeUint(0x18, 6) // internal message info
-            .storeAddress(receiver.address) // destination address
-            .storeCoins(toNano('0.01')) // amount to send
-            .storeUint(0, 1 + 4 + 4 + 64 + 32 + 1) // default message headers
-            .storeUint(1, 1)
-            .storeRef(internalMessage) // store the message content as a reference
-            .endCell();
+        const messageToSend = beginCell().store(storeMessageRelaxed(internal({
+            to: receiver.address,
+            value: toNano(0.01),
+            body: internalMessage,
+            bounce: true,
+        }))).endCell();
 
         const receiverBalanceBefore = await receiver.getBalance();
 

@@ -5,13 +5,13 @@ import { sign } from '@ton/crypto'
 export type HelloWorldConfig = {
     id: number;
     seqno: number;
-    public_key: Buffer;
+    publicKey: Buffer;
 };
 export function helloWorldConfigToCell(config: HelloWorldConfig): Cell {
     return beginCell()
         .storeUint(config.id, 32)
         .storeUint(config.seqno, 32)
-        .storeBuffer(config.public_key)
+        .storeBuffer(config.publicKey)
     .endCell();
 }
 
