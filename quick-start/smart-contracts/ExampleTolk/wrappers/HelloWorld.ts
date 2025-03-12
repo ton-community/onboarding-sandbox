@@ -1,16 +1,16 @@
 import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode } from '@ton/core';
+import { sign } from '@ton/crypto'
 
 export type HelloWorldConfig = {
     id: number;
     seqno: number;
-    public_key: bigint;
+    publicKey: Buffer;
 };
-
 export function helloWorldConfigToCell(config: HelloWorldConfig): Cell {
     return beginCell()
         .storeUint(config.id, 32)
         .storeUint(config.seqno, 32)
-        .storeUint(config.public_key, 256)
+        .storeBuffer(config.publicKey)
     .endCell();
 }
 
@@ -59,6 +59,32 @@ export class HelloWorld implements Contract {
         });
     }
 
+    async sendExternal(
+        provider: ContractProvider,
+        opts: {
+            mode: number
+            message: Cell,
+            secret_key: Buffer
+        }
+    ) {
+        const seqno = await this.getCounter(provider)
+        const id = await this.getID(provider) 
+    
+        const toSign = beginCell()
+            .storeUint(id, 32)
+            .storeUint(seqno, 32)
+            .storeUint(opts.mode, 8)
+            .storeRef(opts.message)
+    
+        const signature = sign(toSign.endCell().hash(), opts.secret_key)
+    
+        return await provider.external(beginCell()
+            .storeBuffer(signature)
+            .storeBuilder(toSign)
+        .endCell()
+        );
+    }
+
     async getCounter(provider: ContractProvider) {
         const result = await provider.get('currentCounter', []);
         return result.stack.readNumber();
@@ -71,6 +97,14 @@ export class HelloWorld implements Contract {
 
     async getSeqnoPKey(provider: ContractProvider) {
         const result = await provider.get('get_seqno_public_key', []);
-        return [result.stack.readNumber(), result.stack.readBigNumber()];
+        const seqno = result.stack.readNumber();
+        const publicKeyBigInt = result.stack.readBigNumber();
+
+        // Convert BigInt to Buffer (32 bytes)
+        const publicKeyHex = publicKeyBigInt.toString(16).padStart(64, '0');
+
+        const publicKeyBuffer = Buffer.from(publicKeyHex, 'hex');
+
+        return [seqno, publicKeyBuffer]
     }
 }
