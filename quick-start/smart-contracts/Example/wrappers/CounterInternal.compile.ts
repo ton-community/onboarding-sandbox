@@ -1,6 +1,9 @@
 import { CompilerConfig } from '@ton/blueprint';
 
 export const compile: CompilerConfig = {
-    lang: 'func',
-    targets: ['contracts/counter_internal.fc'],
+    lang: 'tact',
+    target: 'contracts/counter_internal.tact',
+    options: {
+        debug: true,
+    },
 };

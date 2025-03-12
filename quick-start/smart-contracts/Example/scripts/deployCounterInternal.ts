@@ -1,21 +1,22 @@
 import { toNano } from '@ton/core';
 import { CounterInternal } from '../wrappers/CounterInternal';
-import { compile, NetworkProvider } from '@ton/blueprint';
+import { NetworkProvider } from '@ton/blueprint';
 
 export async function run(provider: NetworkProvider) {
-    const counterInternal = provider.open(
-        CounterInternal.createFromConfig(
-            {
-                id: Math.floor(Math.random() * 10000),
-                counter: 0,
-            },
-            await compile('CounterInternal')
-        )
-    );
+    const counterInternal = provider.open(await CounterInternal.fromInit(BigInt(Math.floor(Math.random() * 10000))));
 
-    await counterInternal.sendDeploy(provider.sender(), toNano('0.05'));
+    await counterInternal.send(
+        provider.sender(),
+        {
+            value: toNano('0.05'),
+        },
+        {
+            $$type: 'Deploy',
+            queryId: 0n,
+        }
+    );
 
     await provider.waitForDeploy(counterInternal.address);
 
-    console.log('ID', await counterInternal.getID());
+    console.log('ID', await counterInternal.getId());
 }
