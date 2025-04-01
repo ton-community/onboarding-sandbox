@@ -1,35 +1,30 @@
 #include "imports/stdlib.fc";
 
 const op::increase = "op::increase"c; ;; create an opcode from string using the "c" prefix, this results in 0x7e8764ef opcode in this case
+const op::send_increase = "op::send_increase"c; ;; create an opcode from string using the "c" prefix, this results in 0x7e8764ef opcode in this case
 
-;; load_data retrieves variables from TVM storage cell
 (int, int, int) load_data() {
     var ds = get_data().begin_parse();
 
-    ;; id is required to be able to create different instances of counters
-    ;; since addresses in TON depend on the initial state of the contract
     int ctx_id = ds~load_uint(32);
-    int seqno = ds~load_uint(32);
-    int public_key = ds~load_uint(256);
+    int ctx_counter = ds~load_uint(32);
+    int ctx_counter_ext = ds~load_uint(256);
 
     ds.end_parse();
 
-    return (ctx_id, seqno, public_key);
+    return (ctx_id, ctx_counter, ctx_counter_ext);
 }
 
-;; save_data stores variables as a cell into persistent storage
-;; impure because of writing into TVM storage
-() save_data(int ctx_id, int seqno, int public_key) impure {
+() save_data(int ctx_id, int ctx_counter, int ctx_counter_ext) impure {
     set_data(
         begin_cell()
             .store_uint(ctx_id, 32)
-            .store_uint(seqno, 32)
-            .store_uint(public_key, 256)
+            .store_uint(ctx_counter, 32)
+            .store_uint(ctx_counter_ext, 256)
         .end_cell()
     );
 }
 
-;; recv_internal is the main function of the contract and is called when it receives a message from other contracts
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
     if (in_msg_body.slice_empty?()) { ;; ignore all empty messages
         return ();
@@ -41,15 +36,15 @@ const op::increase = "op::increase"c; ;; create an opcode from string using the 
         return ();
     }
 
-    var (ctx_id, seqno, public_key) = load_data(); ;; here we populate the storage variables
+    var (ctx_id, ctx_counter, ctx_counter_ext) = load_data(); ;; here we populate the storage variables
 
     int op = in_msg_body~load_uint(32); ;; by convention, the first 32 bits of incoming message is the op
     int query_id = in_msg_body~load_uint(64); ;; also by convention, the next 64 bits contain the "query id", although this is not always the case
 
     if (op == op::increase) {
         int increase_by = in_msg_body~load_uint(32);
-        seqno += increase_by;
-        save_data(ctx_id, seqno, public_key);
+        ctx_counter += increase_by;
+        save_data(ctx_id, ctx_counter, ctx_counter_ext);
         return ();
     }
 
@@ -57,30 +52,29 @@ const op::increase = "op::increase"c; ;; create an opcode from string using the 
 }
 
 () recv_external(slice in_msg) impure {
-    ;; retrives validating data from message body
-    var signature = in_msg~load_bits(512);
-    var cs = in_msg;
-    var (ctx_id, msg_seqno) = (cs~load_uint(32), cs~load_uint(32));
-
-    ;; retrieves stored data for validation checks
-    var (stored_id, stored_seqno, public_key) = load_data();
-    ;; replay protection mechanism through seqno chack and incrementing
-    throw_unless(33, msg_seqno == stored_seqno);
-    ;; id field for multiply addresess with same private_key 
-    throw_unless(34, ctx_id == stored_id);
-    ;; ed25519 signature check
-    throw_unless(35, check_signature(slice_hash(in_msg), signature, public_key));
-    ;; accepting message after all checks
     accept_message();
-    ;; optimization technique
-    ;; putting message body to stack head
-    cs~touch();
-    ;; sending serialized on client side messages 
-    while (cs.slice_refs()) {
-        var mode = cs~load_uint(8);
-        send_raw_message(cs~load_ref(), mode);
-    }
-    save_data(stored_id, stored_seqno + 1, public_key);
+
+    var (ctx_id, ctx_counter, ctx_counter_ext) = load_data();
+
+    var query_id = in_msg~load_uint(64);
+    var addr = in_msg~load_msg_addr();
+    var coins = in_msg~load_coins();
+    var increase_by = in_msg~load_uint(32);
+
+    var msg = begin_cell()
+        .store_uint(0x18, 6)
+        .store_slice(addr)
+        .store_coins(coins)
+        .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_uint(op::increase, 32)
+        .store_uint(query_id, 64)
+        .store_uint(increase_by, 32);
+    send_raw_message(msg.end_cell(), 0);
+
+    ctx_counter_ext += increase_by;
+    save_data(ctx_id, ctx_counter, ctx_counter_ext);
+
+    return ();
 }
 
 ;; get methods are a means to conveniently read contract data using, for example, HTTP APIs
@@ -88,8 +82,8 @@ const op::increase = "op::increase"c; ;; create an opcode from string using the 
 ;; note that unlike in many other smart contract VMs, get methods cannot be called by other contracts
 
 int get_counter() method_id {
-    var (_, seqno, _) = load_data();
-    return seqno;
+    var (_, ctx_counter, _) = load_data();
+    return ctx_counter;
 }
 
 int get_id() method_id {
@@ -97,7 +91,7 @@ int get_id() method_id {
     return ctx_id;
 }
 
-(int, int) get_seqno_public_key() method_id {
-    var (_, seqno, public_key) = load_data();
-    return (seqno, public_key);
+(int, int) get_counters() method_id {
+    var (_, ctx_counter, ctx_counter_ext) = load_data();
+    return (ctx_counter, ctx_counter_ext);
 }
