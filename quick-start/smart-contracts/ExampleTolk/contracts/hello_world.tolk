@@ -10,21 +10,21 @@ fun loadData(): (int, int, int) {
     // id is required to be able to create different instances of counters
     // since addresses in TON depend on the initial state of the contract
     var ctxID = ds.loadUint(32);
-    var seqno = ds.loadUint(32);
-    var public_key = ds.loadUint(256);
+    var ctxCounter = ds.loadUint(32);
+    var ctxCounterExt = ds.loadUint(256);
 
     ds.assertEndOfSlice();
 
-    return (ctxID, seqno, public_key);
+    return (ctxID, ctxCounter, ctxCounterExt);
 }
 
 // saveData stores storage variables as a cell into persistent storage
-fun saveData(ctxID: int, seqno: int, public_key: int) {
+fun saveData(ctxID: int, ctxCounter: int, ctxCounterExt: int) {
     setContractData(
         beginCell()
         .storeUint(ctxID, 32)
-        .storeUint(seqno, 32)
-        .storeUint(public_key, 256)
+        .storeUint(ctxCounter, 32)
+        .storeUint(ctxCounterExt, 256)
         .endCell()
     );
 }
@@ -41,15 +41,15 @@ fun onInternalMessage(myBalance: int, msgValue: int, msgFull: cell, msgBody: sli
         return;
     }
 
-    var (ctxID, seqno, public_key) = loadData(); // here we populate the storage variables
+    var (ctxID, ctxCounter, ctxCounterExt) = loadData(); // here we populate the storage variables
 
     val op = msgBody.loadMessageOp(); // by convention, the first 32 bits of incoming message is the op
     val queryID = msgBody.loadMessageQueryId(); // also by convention, the next 64 bits contain the "query id", although this is not always the case
 
     if (op == OP_INCREASE) {
         val increaseBy = msgBody.loadUint(32);
-        seqno += increaseBy;
-        saveData(ctxID, seqno, public_key);
+        ctxCounter += increaseBy;
+        saveData(ctxID, ctxCounter, ctxCounterExt);
         return;
     }
 
@@ -60,43 +60,45 @@ fun acceptExternalMessage(): void
     asm "ACCEPT";
 
 fun onExternalMessage(inMsg: slice) {
-    var signature = inMsg.loadBits(512);
-    var cs = inMsg;
-    var (ctx_id, msg_seqno) = (cs.loadUint(32), cs.loadUint(32));
-
-    // retrieves stored data for validation checks
-    var (stored_id, stored_seqno, public_key) = loadData();
-    // replay protection mechanism through seqno chack and incrementing
-    assert(msg_seqno == stored_seqno, 33);
-    // id field for multiply addresess with same private_key 
-    assert(ctx_id == stored_id, 34);
-    // ed25519 signature check
-    assert(isSignatureValid(sliceHash(inMsg), signature, public_key), 35);
-    // accepting message after all checks
     acceptExternalMessage();
-    // sending serialized on client side messages 
-    while (!cs.isEndOfSliceRefs()) {
-        var mode = cs.loadUint(8);
-        sendRawMessage(cs.loadRef(), mode);
-    }
-    saveData(stored_id, stored_seqno + 1, public_key);
+    var (ctxId, ctxCounter, ctxCounterExt) = loadData();
+
+    var queryId = inMsg.loadUint(64);
+    var addr = inMsg.loadAddress();
+    var coins = inMsg.loadCoins();
+    var increaseBy = inMsg.loadUint(32);
+
+    var msg = beginCell()
+        .storeUint(0x18, 6)
+        .storeSlice(addr)
+        .storeCoins(coins)
+        .storeUint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .storeUint(OP_INCREASE, 32)
+        .storeUint(queryId, 64)
+        .storeUint(increaseBy, 32);
+    sendRawMessage(msg.endCell(), 0);
+
+    ctxCounterExt += increaseBy;
+    saveData(ctxId, ctxCounter, ctxCounterExt);
+
+    return ();
 }
 
 // get methods are a means to conveniently read contract data using, for example, HTTP APIs
 // note that unlike in many other smart contract VMs, get methods cannot be called by other contracts
 
-get currentCounter(): int {
-    var (_, seqno, _) = loadData();
-    return seqno;
+get get_counter(): int {
+    var (_, ctxCounter, _) = loadData();
+    return ctxCounter;
 }
 
-get initialId(): int {
+get get_id(): int {
     var (ctxID, _, _) = loadData();
     return ctxID;
 }
 
-get get_seqno_public_key(): (int, int) {
-    var (_, seqno, public_key) = loadData();
-    return (seqno, public_key);
+get get_counters(): (int, int) {
+    var (_, ctxCounter, ctxCounterExt) = loadData();
+    return (ctxCounter, ctxCounterExt);
 }
 
