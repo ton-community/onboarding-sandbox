@@ -12,14 +12,21 @@ export async function run(provider: NetworkProvider, args: string[]) {
         return;
     }
 
-    const counterInternal = provider.open(CounterInternal.createFromAddress(address));
+    const counterInternal = provider.open(CounterInternal.fromAddress(address));
 
     const counterBefore = await counterInternal.getCounter();
 
-    await counterInternal.sendIncrease(provider.sender(), {
-        increaseBy: 1,
-        value: toNano('0.05'),
-    });
+    await counterInternal.send(
+        provider.sender(),
+        {
+            value: toNano('0.05'),
+        },
+        {
+            $$type: 'Add',
+            queryId: 0n,
+            amount: 1n,
+        }
+    );
 
     ui.write('Waiting for counter to increase...');
 

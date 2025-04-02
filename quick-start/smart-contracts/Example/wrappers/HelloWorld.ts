@@ -4,14 +4,14 @@ import { sign } from '@ton/crypto'
 
 export type HelloWorldConfig = {
     id: number;
-    seqno: number;
-    publicKey: Buffer;
+    ctxCounter: number;
+    ctxCounterExt: bigint;
 };
 export function helloWorldConfigToCell(config: HelloWorldConfig): Cell {
     return beginCell()
         .storeUint(config.id, 32)
-        .storeUint(config.seqno, 32)
-        .storeBuffer(config.publicKey)
+        .storeUint(config.ctxCounter, 32)
+        .storeUint(config.ctxCounterExt, 256)
     .endCell();
 }
 
@@ -60,35 +60,23 @@ export class HelloWorld implements Contract {
         });
     }
 
-    async sendExternal(
+    async sendExternalIncrease(
         provider: ContractProvider,
         opts: {
-            mode: number
-            message: Cell,
-            secret_key: Buffer
+            increaseBy: number;
+            value: bigint;
+            addr: Address;
+            queryID?: number;
         }
     ) {
-        const seqno = await this.getCounter(provider)
-        const id = await this.getID(provider) 
-
-        const toSign = beginCell()
-            .storeUint(id, 32)
-            .storeUint(seqno, 32)
-            .storeUint(opts.mode, 8)
-            .storeRef(opts.message)
-
-        const signature = sign(toSign.endCell().hash(), opts.secret_key)
-
-        return await provider.external(beginCell()
-            .storeBuffer(signature)
-            .storeBuilder(toSign)
+        const message = beginCell()
+            .storeUint(opts.queryID ?? 0, 64)
+            .storeAddress(opts.addr)
+            .storeCoins(opts.value)
+            .storeUint(opts.increaseBy, 32)
         .endCell()
-        );
-    }
 
-    async getCounter(provider: ContractProvider) {
-        const result = await provider.get('get_counter', []);
-        return result.stack.readNumber();
+        return await provider.external(message);
     }
 
     async getID(provider: ContractProvider) {
@@ -96,16 +84,16 @@ export class HelloWorld implements Contract {
         return result.stack.readNumber();
     }
 
-    async getSeqnoPKey(provider: ContractProvider) {
-        const result = await provider.get('get_seqno_public_key', []);
-        const seqno = result.stack.readNumber();
-        const publicKeyBigInt = result.stack.readBigNumber();
+    async getCounter(provider: ContractProvider) {
+        const result = await provider.get('get_counter', []);
+        return result.stack.readNumber();
+    }
 
-        // Convert BigInt to Buffer (32 bytes)
-        const publicKeyHex = publicKeyBigInt.toString(16).padStart(64, '0');
+    async getCounters(provider: ContractProvider) : Promise<[number, bigint]> {
+        const result = await provider.get('get_counters', []);
+        const ctxCounter = result.stack.readNumber();
+        const ctxCounterExt = result.stack.readBigNumber();
 
-        const publicKeyBuffer = Buffer.from(publicKeyHex, 'hex');
-
-        return [seqno, publicKeyBuffer]
+        return [ctxCounter, ctxCounterExt]
     }
 }
